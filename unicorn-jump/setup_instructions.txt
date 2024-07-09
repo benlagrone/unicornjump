@@ -1,0 +1,33 @@
+1. Set up a new Create React App project:
+   npx create-react-app unicorn-jump
+   cd unicorn-jump
+
+2. Replace the contents of the src folder with our game files:
+   - Move App.js, Game.js, Character.js, Platform.js, Obstacle.js, and PowerUp.js into the src folder.
+   - Delete any unnecessary files created by Create React App (like App.css, logo.svg, etc.)
+
+3. Move the images folder into the public directory:
+   mv images public/
+
+4. Update the import statements in our files to use the correct paths.
+
+5. Update the index.js file to render our App component:
+
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+
+6. Install necessary dependencies:
+   npm install tailwindcss
+
+7. Run the development server:
+   npm start
+
+After completing these steps, your Unicorn Jump game should be running and accessible at http://localhost:3000 in your web browser.
