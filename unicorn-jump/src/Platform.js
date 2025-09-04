@@ -10,29 +10,18 @@ const PLATFORM_TYPES = {
     SPECIAL: 'special'
 };
 
-const Platform = ({ type, position, width }) => {
-    // Platform properties based on type
-    const getPlatformProperties = (type) => {
-        switch (type) {
-            case PLATFORM_TYPES.REGULAR:
-                return { color: 'green', height: 20 };
-            case PLATFORM_TYPES.MOVING:
-                return { color: 'blue', height: 20 };
-            case PLATFORM_TYPES.BREAKABLE:
-                return { color: 'orange', height: 15 };
-            case PLATFORM_TYPES.SPECIAL:
-                return { color: 'purple', height: 25 };
-            default:
-                return { color: 'gray', height: 20 };
-        }
-    };
+// Update this array with the correct filenames of your floating platform images
+const PLATFORM_IMAGES = [
+    '/assets/platform/float/platform-1.png',
+    '/assets/platform/float/platform-2.png',
+    '/assets/platform/float/platform-3.png',
+    '/assets/platform/float/platform-4.png',
+    '/assets/platform/float/platform-5.png'
+];
 
-    const { color, height } = getPlatformProperties(type);
-
-    // State for moving platforms
+const Platform = ({ type, position, width, image }) => {
     const [currentPosition, setCurrentPosition] = useState(position);
 
-    // Effect for moving platforms
     useEffect(() => {
         if (type === PLATFORM_TYPES.MOVING) {
             const moveInterval = setInterval(() => {
@@ -53,58 +42,46 @@ const Platform = ({ type, position, width }) => {
                 left: `${currentPosition.x}px`,
                 bottom: `${currentPosition.y}px`,
                 width: `${width}px`,
-                height: `${height}px`,
-                backgroundColor: color,
+                height: '60px', // Adjusted height to better match platform images
+                backgroundImage: `url(${image})`,
+                backgroundColor: '#8B4513', // Fallback color if image fails to load
+                backgroundSize: 'cover',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
                 transition: type === PLATFORM_TYPES.MOVING ? 'left 0.05s linear' : 'none'
             }}
-        >
-            {/* Add platform sprite or additional styling here */}
-        </div>
+        />
     );
 };
 
-const PlatformManager = ({ gameSpeed, onCollision }) => {
-    // Function to generate a single platform with a random position
+const PlatformManager = ({ gameSpeed, onCollision, characterPosition, jumpVelocity }) => {
     const createRandomPlatform = (id) => ({
         id: id,
-        type: 'regular', // You can randomize this too if you have different types
+        type: Object.values(PLATFORM_TYPES)[Math.floor(Math.random() * Object.values(PLATFORM_TYPES).length)],
         position: {
-            x: Math.random() * (window.innerWidth - 200), // Random X position within the window width
-            y: Math.random() * (window.innerHeight - 200) // Random Y position within the window height
+            x: Math.random() * (window.innerWidth - 300),
+            y: Math.random() * (window.innerHeight - 100)
         },
-        width: 100 // Or any other logic for random width
+        width: 300, // Set a consistent width for all platforms
+        image: PLATFORM_IMAGES[Math.floor(Math.random() * PLATFORM_IMAGES.length)]
     });
 
-    // Initialize with a set of random platforms
     const initialPlatforms = Array.from({ length: 5 }, (_, index) => 
         createRandomPlatform(index + 1)
     );
 
     const [platforms, setPlatforms] = useState(initialPlatforms);
 
-
-    // Function to generate new platforms
     const generatePlatform = () => {
-        const types = Object.values(PLATFORM_TYPES);
-        const newPlatform = {
-            id: Date.now(),
-            type: types[Math.floor(Math.random() * types.length)],
-            position: {
-                x: Math.random() * (window.innerWidth - 100),
-                y: window.innerHeight // Start off-screen at the bottom
-            },
-            width: Math.random() * (100 - 50) + 50 // Random width between 50 and 100
-        };
+        const newPlatform = createRandomPlatform(Date.now());
         setPlatforms(prevPlatforms => [...prevPlatforms, newPlatform]);
     };
 
-    // Effect to continuously generate platforms
     useEffect(() => {
         const generationInterval = setInterval(generatePlatform, 2000 / gameSpeed);
         return () => clearInterval(generationInterval);
     }, [gameSpeed]);
 
-    // Effect to move platforms upwards and remove off-screen platforms
     useEffect(() => {
         const movePlatforms = () => {
             setPlatforms(prevPlatforms => 
@@ -116,12 +93,25 @@ const PlatformManager = ({ gameSpeed, onCollision }) => {
                             y: platform.position.y - 1 * gameSpeed
                         }
                     }))
-                  );
+                    .filter(platform => platform.position.y > -100) // Remove platforms that are off-screen
+            );
         };
 
         const moveInterval = setInterval(movePlatforms, 16); // 60 FPS
         return () => clearInterval(moveInterval);
     }, [gameSpeed]);
+
+    // Check for collisions
+    useEffect(() => {
+        platforms.forEach(platform => {
+            if (characterPosition.y + 200 <= platform.position.y + 60 && // 200 is CHARACTER_HEIGHT
+                characterPosition.y + 200 + jumpVelocity >= platform.position.y &&
+                characterPosition.x + 200 > platform.position.x && // 200 is CHARACTER_WIDTH
+                characterPosition.x < platform.position.x + platform.width) {
+                onCollision(platform);
+            }
+        });
+    }, [platforms, characterPosition, jumpVelocity, onCollision]);
 
     return (
         <>
@@ -131,6 +121,7 @@ const PlatformManager = ({ gameSpeed, onCollision }) => {
                     type={platform.type}
                     position={platform.position}
                     width={platform.width}
+                    image={platform.image}
                 />
             ))}
         </>

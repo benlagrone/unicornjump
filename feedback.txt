@@ -1,0 +1,5 @@
+the platforms moove to quickly, 
+the platforms should stay closer together, with margins right and left at 20% of the screen
+the chracter needs to be 100 px wide
+the chracter is broken, it disappears when the player first tries to move it
+the splash screen is too short, the background only clears the text, it needs to extend the whole vertical space of the screen
