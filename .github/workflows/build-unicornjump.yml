@@ -1,0 +1,144 @@
+name: Build Unicornjump Image
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: unicornjump-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_publish:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_REF: ghcr.io/benlagrone/unicornjump-web:sha-${{ github.sha }}
+      LATEST_REF: ghcr.io/benlagrone/unicornjump-web:latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: unicorn-jump/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: unicorn-jump
+        run: npm ci --legacy-peer-deps
+
+      - name: Run Tests If Present
+        working-directory: unicorn-jump
+        shell: bash
+        run: |
+          set -euo pipefail
+          if find src -type f \( -name '*.test.*' -o -name '*.spec.*' \) | grep -q .; then
+            CI=true npm test -- --watchAll=false
+          else
+            echo "No test files found in unicorn-jump/src; build and container smoke are the active gates." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Build Web App
+        working-directory: unicorn-jump
+        run: npm run build
+
+      - name: Build Container For Smoke
+        run: docker build -t unicornjump-web:ci ./unicorn-jump
+
+      - name: Container Smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --rm --name unicornjump-smoke -p 127.0.0.1:18081:80 unicornjump-web:ci
+          trap 'docker rm -f unicornjump-smoke >/dev/null 2>&1 || true' EXIT
+
+          for url in http://127.0.0.1:18081/ http://127.0.0.1:18081/asset-manifest.json; do
+            for attempt in $(seq 1 20); do
+              if curl -fsSI "$url" >/dev/null 2>&1; then
+                break
+              fi
+              sleep 2
+            done
+            curl -fsSI "$url"
+          done
+
+      - name: Login To GHCR
+        shell: bash
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Tag And Push Image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker tag unicornjump-web:ci "$IMAGE_REF"
+          docker tag unicornjump-web:ci "$LATEST_REF"
+          docker push "$IMAGE_REF"
+          docker push "$LATEST_REF"
+
+      - name: Write Build Metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYMETA'
+          import json
+          import os
+          import subprocess
+
+          image_ref = os.environ['IMAGE_REF']
+          try:
+              digest = subprocess.check_output(
+                  ['docker', 'image', 'inspect', image_ref, '--format', '{{index .RepoDigests 0}}'],
+                  text=True,
+                  stderr=subprocess.DEVNULL,
+              ).strip()
+          except Exception:
+              digest = ''
+
+          with open('build-metadata.json', 'w', encoding='utf-8') as fh:
+              json.dump(
+                  {
+                      'commit_sha': os.environ['GITHUB_SHA'],
+                      'image_tag': image_ref,
+                      'image_digest': digest,
+                  },
+                  fh,
+                  indent=2,
+              )
+          PYMETA
+
+      - name: Upload Build Metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: unicornjump-build-${{ github.sha }}
+          path: build-metadata.json
+
+      - name: Build Summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIGEST="$(python3 - <<'PYDIGEST'
+          import json
+          with open('build-metadata.json', 'r', encoding='utf-8') as fh:
+              data = json.load(fh)
+          print(data.get('image_digest', ''))
+          PYDIGEST
+          )"
+
+          {
+            echo "## Unicornjump Build"
+            echo ""
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Image tag: \`${IMAGE_REF}\`"
+            if [ -n "$DIGEST" ]; then
+              echo "- Image digest: \`${DIGEST}\`"
+            fi
+            echo "- Deploy next: run \`Deploy Unicornjump\` in fortress-phronesis with source SHA \`${GITHUB_SHA}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
