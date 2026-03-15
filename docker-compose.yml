@@ -1,0 +1,8 @@
+services:
+  unicornjump-web:
+    build:
+      context: ./unicorn-jump
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:13081:80"
+    restart: unless-stopped
