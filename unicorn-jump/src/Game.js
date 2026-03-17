@@ -383,6 +383,17 @@ const createWorldScene = (biome, viewport, levelHeight, metrics) => {
           type: biome.landing.village.type,
           interactionRadius: metrics.worldInteractionRadius,
           dialogLines: biome.landing.village.dialogLines,
+          reward: biome.landing.village.reward
+            ? {
+                ...biome.landing.village.reward,
+                activationLines: [...biome.landing.village.reward.activationLines],
+                revisitLines: [...biome.landing.village.reward.revisitLines],
+              }
+            : null,
+          visited: false,
+          rewardGranted: false,
+          visitCount: 0,
+          rewardActivatedAt: null,
         }
       : null,
     creatureHome: {
@@ -626,6 +637,29 @@ const createLevelPlatforms = (viewport, levelHeight, difficultyProfile, metrics)
 };
 
 const cloneDialog = (dialog) => (dialog ? { ...dialog } : null);
+const cloneVillageReward = (reward) =>
+  reward
+    ? {
+        ...reward,
+        activationLines: [...reward.activationLines],
+        revisitLines: [...reward.revisitLines],
+      }
+    : null;
+const cloneWorldVillage = (village) =>
+  village
+    ? {
+        ...village,
+        reward: cloneVillageReward(village.reward),
+      }
+    : null;
+const getVillageVisitScore = (gameState) =>
+  gameState.worldScene?.village?.rewardGranted
+    ? gameState.worldScene.village.reward?.points ?? 0
+    : 0;
+const getVillagePromptText = (village) =>
+  village?.rewardGranted
+    ? village.reward?.activePrompt ?? 'Glow is awake'
+    : village?.reward?.prompt ?? 'Tap to visit';
 
 const createSkyObstacle = (gameState, runtimeConfig) => {
   const fromLeft = Math.random() < 0.5;
@@ -675,6 +709,7 @@ const createSnapshot = (gameState) => ({
   score: gameState.score,
   stageScore: gameState.stageScore,
   progress: gameState.progress,
+  rescueCount: gameState.rescueCount,
   timeMs: gameState.timeMs,
   outcome: gameState.outcome,
   rewardUnlocked: gameState.rewardUnlocked,
@@ -685,7 +720,7 @@ const createSnapshot = (gameState) => ({
         platform: { ...gameState.worldScene.platform },
         gate: { ...gameState.worldScene.gate },
         landmark: { ...gameState.worldScene.landmark },
-        village: gameState.worldScene.village ? { ...gameState.worldScene.village } : null,
+        village: cloneWorldVillage(gameState.worldScene.village),
         creatureHome: { ...gameState.worldScene.creatureHome },
         playerStartX: gameState.worldScene.playerStartX,
       }
@@ -744,8 +779,10 @@ const refreshScore = (gameState, companionBonuses) => {
     gameState.quest.collected * (12 + companionBonuses.collectibleBonus);
   const completionScore = gameState.rewardUnlocked ? 32 : 0;
   const rescueScore = gameState.rescueCount * 5;
+  const villageScore = getVillageVisitScore(gameState);
 
-  gameState.stageScore = progressScore + collectibleScore + completionScore + rescueScore;
+  gameState.stageScore =
+    progressScore + collectibleScore + completionScore + rescueScore + villageScore;
   gameState.score = gameState.scoreOffset + gameState.stageScore;
 };
 
@@ -863,17 +900,68 @@ const buildLandingLandmarkDialog = (biome) =>
     3600
   );
 
-const buildLandingVillageDialog = (biome) =>
+const buildLandingVillageDialog = (biome, village) =>
   createDialog(
     null,
-    biome.landing?.village?.dialogLines ?? [
+    village?.rewardGranted
+      ? village.reward?.revisitLines ??
+          biome.landing?.village?.dialogLines ?? [
+            biome.shortName,
+            'small homes rest near the path',
+            'kind voices drift nearby',
+          ]
+      : village?.dialogLines ??
+          biome.landing?.village?.dialogLines ?? [
+            biome.shortName,
+            'small homes rest near the path',
+            'kind voices drift nearby',
+          ],
+    village?.rewardGranted ? 'hint' : 'warm',
+    village?.rewardGranted ? 3000 : 3400
+  );
+
+const buildLandingVillageRewardDialog = (biome, village) =>
+  createDialog(
+    null,
+    village?.reward?.activationLines ??
+      biome.landing?.village?.dialogLines ?? [
       biome.shortName,
       'small homes rest near the path',
       'kind voices drift nearby',
     ],
-    'warm',
-    3400
+    'celebrate',
+    3200
   );
+
+const visitLandingVillage = (gameState, runtimeConfig, callbacks) => {
+  const village = gameState.worldScene?.village;
+  if (!village) {
+    return false;
+  }
+
+  village.visitCount += 1;
+  village.visited = true;
+  const firstVisit = !village.rewardGranted;
+
+  if (firstVisit) {
+    village.rewardGranted = true;
+    village.rewardActivatedAt = gameState.timeMs;
+  }
+
+  if (callbacks.onAudioEvent) {
+    callbacks.onAudioEvent(firstVisit ? 'collect' : 'tap');
+  }
+
+  applyDialog(
+    gameState,
+    firstVisit
+      ? buildLandingVillageRewardDialog(runtimeConfig.biome, village)
+      : buildLandingVillageDialog(runtimeConfig.biome, village),
+    true
+  );
+
+  return firstVisit;
+};
 
 const enterClimbScene = (gameState, callbacks) => {
   const startPlatform =
@@ -959,10 +1047,7 @@ const updateLandingScene = (gameState, deltaMs, inputState, callbacks, runtimeCo
     triggerCreatureReaction(gameState);
     applyDialog(gameState, buildReminderDialog(runtimeConfig.biome, gameState.quest), true);
   } else if (worldScene.village && (inputState.villageTap || (inputState.interact && nearVillage))) {
-    if (callbacks.onAudioEvent) {
-      callbacks.onAudioEvent('tap');
-    }
-    applyDialog(gameState, buildLandingVillageDialog(runtimeConfig.biome), true);
+    visitLandingVillage(gameState, runtimeConfig, callbacks);
   } else if (inputState.landmarkTap || (inputState.interact && nearLandmark)) {
     if (callbacks.onAudioEvent) {
       callbacks.onAudioEvent('tap');
@@ -2404,9 +2489,24 @@ const renderLandingVillageSprite = (village, palette) => {
     return null;
   }
 
+  const rewardGlowStyle = village.rewardGranted
+    ? {
+        position: 'absolute',
+        left: '12%',
+        right: '12%',
+        top: '12%',
+        bottom: '10%',
+        borderRadius: '50%',
+        background: palette.accentSoft,
+        opacity: 0.42,
+        filter: 'blur(16px)',
+      }
+    : null;
+
   if (village.type === 'tea-table') {
     return (
       <div style={{ position: 'absolute', inset: 0 }}>
+        {rewardGlowStyle && <div style={rewardGlowStyle} />}
         <div
           style={{
             position: 'absolute',
@@ -2437,6 +2537,7 @@ const renderLandingVillageSprite = (village, palette) => {
   if (village.type === 'wool-cart') {
     return (
       <div style={{ position: 'absolute', inset: 0 }}>
+        {rewardGlowStyle && <div style={rewardGlowStyle} />}
         <div
           style={{
             position: 'absolute',
@@ -2480,6 +2581,7 @@ const renderLandingVillageSprite = (village, palette) => {
   if (village.type === 'mushroom-house') {
     return (
       <div style={{ position: 'absolute', inset: 0 }}>
+        {rewardGlowStyle && <div style={rewardGlowStyle} />}
         <div
           style={{
             position: 'absolute',
@@ -2509,6 +2611,7 @@ const renderLandingVillageSprite = (village, palette) => {
   if (village.type === 'mirror-stand') {
     return (
       <div style={{ position: 'absolute', inset: 0 }}>
+        {rewardGlowStyle && <div style={rewardGlowStyle} />}
         <div
           style={{
             position: 'absolute',
@@ -2540,6 +2643,7 @@ const renderLandingVillageSprite = (village, palette) => {
   if (village.type === 'windmill-post') {
     return (
       <div style={{ position: 'absolute', inset: 0 }}>
+        {rewardGlowStyle && <div style={rewardGlowStyle} />}
         <div
           style={{
             position: 'absolute',
@@ -2586,6 +2690,271 @@ const renderLandingVillageSprite = (village, palette) => {
             transform: 'translateX(-50%) rotate(-34deg)',
           }}
         />
+      </div>
+    );
+  }
+
+  return null;
+};
+
+const renderLandingVillageReaction = (worldScene, palette, timeMs, cameraY) => {
+  const village = worldScene?.village;
+  if (!village?.rewardGranted || !village.reward) {
+    return null;
+  }
+
+  const villageCenterX = village.x + village.width / 2;
+  const gateCenterX = worldScene.gate.x + worldScene.gate.width / 2;
+  const platformTop = worldScene.platform.y - cameraY;
+  const pulse = 0.76 + ((Math.sin(timeMs / 280) + 1) / 2) * 0.24;
+
+  if (village.reward.reactionType === 'lantern-lights') {
+    const startX = villageCenterX + village.width * 0.12;
+    const startY = village.y + village.height * 0.18 - cameraY;
+    const endX = gateCenterX - worldScene.gate.width * 0.12;
+    const endY = worldScene.gate.y + worldScene.gate.height * 0.18 - cameraY;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const ropeWidth = Math.hypot(dx, dy);
+    const ropeAngle = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+    return (
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 12 }}>
+        <div
+          style={{
+            position: 'absolute',
+            left: startX,
+            top: startY,
+            width: ropeWidth,
+            height: 2,
+            background: 'rgba(131, 95, 67, 0.88)',
+            transformOrigin: '0 50%',
+            transform: `rotate(${ropeAngle}deg)`,
+            opacity: 0.86,
+          }}
+        />
+        {Array.from({ length: 5 }).map((_, index) => {
+          const ratio = (index + 1) / 6;
+          const x = startX + dx * ratio - 6;
+          const y =
+            startY + dy * ratio + 12 + Math.sin(timeMs / 320 + index * 0.7) * 4;
+
+          return (
+            <div
+              key={index}
+              style={{
+                position: 'absolute',
+                left: x,
+                top: y,
+                width: 12,
+                height: 16,
+                borderRadius: '8px 8px 10px 10px',
+                background: palette.questItem,
+                boxShadow: `0 0 18px ${palette.accentSoft}`,
+                opacity: pulse,
+              }}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (village.reward.reactionType === 'hill-breeze') {
+    return (
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 12 }}>
+        {[
+          { left: villageCenterX - 18, top: platformTop - 58, width: 118, rotate: -10 },
+          { left: villageCenterX + 34, top: platformTop - 86, width: 134, rotate: -4 },
+          { left: gateCenterX - 124, top: platformTop - 46, width: 122, rotate: 6 },
+        ].map((streak, index) => (
+          <div
+            key={index}
+            style={{
+              position: 'absolute',
+              left: streak.left + Math.sin(timeMs / 420 + index) * 10,
+              top: streak.top + Math.cos(timeMs / 520 + index) * 5,
+              width: streak.width,
+              height: 16 + (index % 2) * 4,
+              borderRadius: 999,
+              background:
+                'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.68), rgba(255,255,255,0))',
+              boxShadow: `0 0 14px ${palette.accentSoft}`,
+              opacity: 0.7 + index * 0.08,
+              transform: `rotate(${streak.rotate}deg)`,
+            }}
+          />
+        ))}
+        {[0.18, 0.48, 0.78].map((ratio, index) => (
+          <div
+            key={ratio}
+            style={{
+              position: 'absolute',
+              left: villageCenterX + (gateCenterX - villageCenterX) * ratio,
+              top: platformTop - 74 + Math.sin(timeMs / 360 + index) * 10,
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.82)',
+              boxShadow: `0 0 16px ${palette.accentSoft}`,
+              opacity: pulse,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (village.reward.reactionType === 'story-glow') {
+    return (
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 12 }}>
+        {[0.12, 0.28, 0.46, 0.66, 0.84].map((ratio, index) => {
+          const x =
+            villageCenterX +
+            (gateCenterX - villageCenterX) * ratio +
+            Math.sin(timeMs / 430 + index) * 10;
+          const y =
+            platformTop -
+            58 -
+            Math.sin(ratio * Math.PI) * 30 +
+            Math.cos(timeMs / 390 + index) * 8;
+
+          return (
+            <React.Fragment key={ratio}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: x - 8,
+                  top: y,
+                  width: 16,
+                  height: 12,
+                  borderRadius: 3,
+                  background: 'rgba(255, 248, 225, 0.94)',
+                  border: '1px solid rgba(198, 162, 92, 0.68)',
+                  boxShadow: `0 0 12px ${palette.accentSoft}`,
+                  transform: `rotate(${index % 2 === 0 ? -16 : 14}deg)`,
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: x + 8,
+                  top: y - 8,
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: palette.questItem,
+                  boxShadow: `0 0 16px ${palette.questItem}`,
+                  opacity: pulse,
+                }}
+              />
+            </React.Fragment>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (village.reward.reactionType === 'sun-path') {
+    const startX = villageCenterX + village.width * 0.08;
+    const startY = village.y + village.height * 0.26 - cameraY;
+    const endX = gateCenterX - worldScene.gate.width * 0.08;
+    const endY = worldScene.gate.y + worldScene.gate.height * 0.22 - cameraY;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const beamWidth = Math.hypot(dx, dy);
+    const beamAngle = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+    return (
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 12 }}>
+        <div
+          style={{
+            position: 'absolute',
+            left: startX,
+            top: startY,
+            width: beamWidth,
+            height: 12,
+            borderRadius: 999,
+            background: `linear-gradient(90deg, rgba(255,255,255,0), ${palette.questItemSoft}, ${palette.questItem}, rgba(255,255,255,0))`,
+            boxShadow: `0 0 16px ${palette.questItem}`,
+            opacity: 0.72 + pulse * 0.18,
+            transformOrigin: '0 50%',
+            transform: `rotate(${beamAngle}deg)`,
+          }}
+        />
+        {[0.24, 0.52, 0.8].map((ratio, index) => (
+          <div
+            key={ratio}
+            style={{
+              position: 'absolute',
+              left: startX + dx * ratio - 5,
+              top: startY + dy * ratio - 8 + Math.sin(timeMs / 310 + index) * 5,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.92)',
+              boxShadow: `0 0 16px ${palette.questItem}`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (village.reward.reactionType === 'prairie-spin') {
+    const spinCenterX = gateCenterX;
+    const spinCenterY = worldScene.gate.y + worldScene.gate.height * 0.28 - cameraY;
+    const spinAngle = timeMs / 18;
+
+    return (
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 12 }}>
+        {[0, 90, 180, 270].map((angle) => (
+          <div
+            key={angle}
+            style={{
+              position: 'absolute',
+              left: spinCenterX,
+              top: spinCenterY - 3,
+              width: 26,
+              height: 6,
+              borderRadius: 999,
+              background: palette.questItemSoft,
+              boxShadow: `0 0 12px ${palette.accentSoft}`,
+              opacity: pulse,
+              transformOrigin: '0 50%',
+              transform: `rotate(${spinAngle + angle}deg)`,
+            }}
+          />
+        ))}
+        <div
+          style={{
+            position: 'absolute',
+            left: spinCenterX - 6,
+            top: spinCenterY - 6,
+            width: 12,
+            height: 12,
+            borderRadius: '50%',
+            background: palette.questItem,
+            boxShadow: `0 0 16px ${palette.questItem}`,
+          }}
+        />
+        {[0.16, 0.34, 0.58, 0.82].map((ratio, index) => (
+          <div
+            key={ratio}
+            style={{
+              position: 'absolute',
+              left:
+                villageCenterX + (gateCenterX - villageCenterX) * ratio + Math.sin(timeMs / 280 + index) * 10,
+              top: platformTop - 48 + Math.cos(timeMs / 340 + index) * 8,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: 'rgba(191, 219, 254, 0.9)',
+              boxShadow: `0 0 16px ${palette.accentSoft}`,
+              opacity: 0.78,
+            }}
+          />
+        ))}
       </div>
     );
   }
@@ -2905,7 +3274,11 @@ const Game = ({
   useEffect(() => {
     window.render_game_to_text = () => {
       const state = renderedStateRef.current;
-      const guideLightsVisible = getCompanionBonuses(state.companions).revealGuides;
+      const companionBonuses = getCompanionBonuses(state.companions);
+      const guideLightsVisible = companionBonuses.revealGuides;
+      const villageHarmony = getVillageVisitScore(state);
+      const collectibleHarmony =
+        state.quest.collected * (12 + companionBonuses.collectibleBonus);
 
       return JSON.stringify({
         coordinateSystem: {
@@ -2923,6 +3296,13 @@ const Game = ({
         sceneMode: state.sceneMode,
         harmony: state.score,
         stageHarmony: state.stageScore,
+        scoreBreakdown: {
+          progress: Math.round(state.progress * 60),
+          collectibles: collectibleHarmony,
+          questComplete: state.rewardUnlocked ? 32 : 0,
+          rescues: state.rescueCount * 5,
+          village: villageHarmony,
+        },
         quest: {
           started: state.quest.started,
           completed: state.quest.completed,
@@ -2987,13 +3367,26 @@ const Game = ({
                 name: state.worldScene.village.name,
                 screenX: Math.round(state.worldScene.village.x),
                 screenY: Math.round(state.worldScene.village.y - state.cameraY),
+                visited: Boolean(state.worldScene.village.visited),
+                rewardGranted: Boolean(state.worldScene.village.rewardGranted),
+                rewardLabel: state.worldScene.village.reward?.label ?? null,
+                rewardPoints: state.worldScene.village.reward?.points ?? 0,
                 canInspect: isPlayerNearTarget(
                   state.player,
                   state.worldScene.village,
                   getPlayerSize(state.player),
                   state.worldScene.village.interactionRadius
                 ),
-                prompt: 'Tap to visit',
+                prompt: getVillagePromptText(state.worldScene.village),
+              }
+            : null,
+        villageReaction:
+          state.sceneMode === 'landing' && state.worldScene?.village?.reward
+            ? {
+                active: Boolean(state.worldScene.village.rewardGranted),
+                label: state.worldScene.village.reward.label,
+                points: state.worldScene.village.reward.points,
+                type: state.worldScene.village.reward.reactionType,
               }
             : null,
         landmark:
@@ -3148,6 +3541,7 @@ const Game = ({
       getPlayerSize(renderState.player),
       worldScene.gate.interactionRadius
     );
+  const villageRewardActive = Boolean(worldScene?.village?.rewardGranted);
   const showCreatureMarker = !renderState.quest.started && creatureVisible;
   const showCreaturePrompt = showCreatureMarker && canHelpCreature;
   const showWorldGatePrompt = Boolean(
@@ -3200,6 +3594,17 @@ const Game = ({
   ];
   const clearedObstacleBadges = renderState.clearedObstacleBadges || [];
   const compactHud = renderState.metrics.compactHud;
+  const villagePromptDetail = worldScene?.village
+    ? villageRewardActive
+      ? getVillagePromptText(worldScene.village)
+      : compactHud
+        ? getVillagePromptText(worldScene.village)
+        : 'Press E or tap'
+    : null;
+  const villageRewardChipText =
+    villageRewardActive && worldScene?.village?.reward
+      ? `${worldScene.village.reward.label} +${worldScene.village.reward.points}`
+      : null;
   const compactControlsVisible =
     compactHud &&
     !renderState.dialog &&
@@ -3625,6 +4030,26 @@ const Game = ({
             >
               {worldScene.platform.name}
             </div>
+
+            {villageRewardChipText && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: compactHud ? 12 : 18,
+                  top: compactHud ? 40 : 50,
+                  padding: compactHud ? '5px 8px' : '6px 10px',
+                  borderRadius: 999,
+                  background: 'rgba(255, 248, 240, 0.82)',
+                  color: biome.palette.heading,
+                  fontSize: compactHud ? 10 : 11,
+                  fontWeight: 700,
+                  letterSpacing: 0.3,
+                  boxShadow: '0 8px 16px rgba(15, 23, 42, 0.12)',
+                }}
+              >
+                {villageRewardChipText}
+              </div>
+            )}
           </div>
 
           {worldScene.village && (
@@ -3641,6 +4066,13 @@ const Game = ({
             >
               {renderLandingVillageSprite(worldScene.village, biome.palette)}
             </div>
+          )}
+
+          {renderLandingVillageReaction(
+            worldScene,
+            biome.palette,
+            renderState.timeMs,
+            renderState.cameraY
           )}
 
           <div
@@ -3665,7 +4097,7 @@ const Game = ({
               width: worldScene.gate.width,
               height: worldScene.gate.height,
               zIndex: 14,
-              filter: canUseWorldGate
+              filter: canUseWorldGate || villageRewardActive
                 ? `drop-shadow(0 0 18px ${biome.palette.accentSoft}) drop-shadow(0 12px 22px rgba(15, 23, 42, 0.18))`
                 : 'drop-shadow(0 12px 22px rgba(15, 23, 42, 0.18))',
             }}
@@ -3720,7 +4152,7 @@ const Game = ({
                 {worldScene.village.name}
               </div>
               <div style={{ fontSize: compactHud ? 10 : 11, lineHeight: 1.2 }}>
-                {compactHud ? 'Tap to visit' : 'Press E or tap'}
+                {villagePromptDetail}
               </div>
             </div>
           )}

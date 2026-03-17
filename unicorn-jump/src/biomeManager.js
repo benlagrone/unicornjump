@@ -21,13 +21,23 @@ const createVillageSpot = (
   type,
   dialogLines,
   widthScale = 0.88,
-  heightScale = 0.82
+  heightScale = 0.82,
+  reward = {}
 ) => ({
   name,
   type,
   dialogLines,
   widthScale,
   heightScale,
+  reward: {
+    points: reward.points ?? 8,
+    label: reward.label ?? `${name} Glow`,
+    prompt: reward.prompt ?? 'Tap to visit',
+    activePrompt: reward.activePrompt ?? 'Glow is awake',
+    reactionType: reward.reactionType ?? type,
+    activationLines: reward.activationLines ?? dialogLines,
+    revisitLines: reward.revisitLines ?? dialogLines,
+  },
 });
 
 export const BIOMES = [
@@ -93,11 +103,33 @@ export const BIOMES = [
         'kind hellos wake the sky pathway',
         'the fox keeps watch nearby',
       ],
-      village: createVillageSpot('Tea Table', 'tea-table', [
-        'Warm tea waits here',
-        'small bridge talk drifts through the mist',
-        'the lantern gate glows east',
-      ]),
+      village: createVillageSpot(
+        'Tea Table',
+        'tea-table',
+        [
+          'Warm tea waits here',
+          'small bridge talk drifts through the mist',
+          'the lantern gate glows east',
+        ],
+        0.88,
+        0.82,
+        {
+          label: 'Lantern Lights',
+          prompt: 'Light the bridge',
+          activePrompt: 'Lights are awake',
+          reactionType: 'lantern-lights',
+          activationLines: [
+            'Tea lights wake bright',
+            'small bridge lanterns guide the climb',
+            'you gained 8 harmony',
+          ],
+          revisitLines: [
+            'Lantern lights stay warm',
+            'the bridge path keeps its soft glow',
+            'the gate shines ahead',
+          ],
+        }
+      ),
     },
     decorations: {
       far: [
@@ -182,11 +214,33 @@ export const BIOMES = [
         'soft songs wake when friends feel heard',
         'the arch opens in wind',
       ],
-      village: createVillageSpot('Wool Cart', 'wool-cart', [
-        'Soft wool rests here',
-        'hill folk trade songs by the path',
-        'the breeze arch waits ahead',
-      ]),
+      village: createVillageSpot(
+        'Wool Cart',
+        'wool-cart',
+        [
+          'Soft wool rests here',
+          'hill folk trade songs by the path',
+          'the breeze arch waits ahead',
+        ],
+        0.88,
+        0.82,
+        {
+          label: 'Hill Breeze',
+          prompt: 'Wake the breeze',
+          activePrompt: 'Breeze is awake',
+          reactionType: 'hill-breeze',
+          activationLines: [
+            'Wool flags lift high',
+            'a hill breeze clears the path',
+            'you gained 8 harmony',
+          ],
+          revisitLines: [
+            'The hill breeze stays',
+            'soft cloth points toward the arch',
+            'the gate waits ahead',
+          ],
+        }
+      ),
     },
     decorations: {
       far: [
@@ -268,11 +322,33 @@ export const BIOMES = [
         'little tales wake after kindness',
         'the page arch waits ahead',
       ],
-      village: createVillageSpot('Mushroom House', 'mushroom-house', [
-        'Round lamps glow here',
-        'quiet tales curl under the cap',
-        'the page arch waits right',
-      ], 0.96, 0.92),
+      village: createVillageSpot(
+        'Mushroom House',
+        'mushroom-house',
+        [
+          'Round lamps glow here',
+          'quiet tales curl under the cap',
+          'the page arch waits right',
+        ],
+        0.96,
+        0.92,
+        {
+          label: 'Story Glow',
+          prompt: 'Wake the tale',
+          activePrompt: 'Story glow is awake',
+          reactionType: 'story-glow',
+          activationLines: [
+            'Page lights drift out',
+            'small tales wake beside the house',
+            'you gained 8 harmony',
+          ],
+          revisitLines: [
+            'Story lights still turn',
+            'the page path glows by the cap',
+            'the arch waits right',
+          ],
+        }
+      ),
     },
     decorations: {
       far: [
@@ -356,11 +432,33 @@ export const BIOMES = [
         'small bird songs wake the bright path',
         'gold arches glow ahead',
       ],
-      village: createVillageSpot('Mirror Stand', 'mirror-stand', [
-        'Bright glass waits here',
-        'sun paths sharpen in warm gold',
-        'the arbor shines east',
-      ], 0.76, 0.88),
+      village: createVillageSpot(
+        'Mirror Stand',
+        'mirror-stand',
+        [
+          'Bright glass waits here',
+          'sun paths sharpen in warm gold',
+          'the arbor shines east',
+        ],
+        0.76,
+        0.88,
+        {
+          label: 'Sun Path',
+          prompt: 'Catch the light',
+          activePrompt: 'Sun path is bright',
+          reactionType: 'sun-path',
+          activationLines: [
+            'Mirror light runs gold',
+            'a sun path points to the arbor',
+            'you gained 8 harmony',
+          ],
+          revisitLines: [
+            'The sun path stays bright',
+            'warm gold points across the rows',
+            'the arbor waits east',
+          ],
+        }
+      ),
     },
     decorations: {
       far: [
@@ -444,11 +542,33 @@ export const BIOMES = [
         'firefly wishes wake with care',
         'the prairie gate will spin',
       ],
-      village: createVillageSpot('Windmill Post', 'windmill-post', [
-        'Small blades turn here',
-        'field folk watch the tall grass bend',
-        'the gate spins upwind',
-      ], 0.82, 1.02),
+      village: createVillageSpot(
+        'Windmill Post',
+        'windmill-post',
+        [
+          'Small blades turn here',
+          'field folk watch the tall grass bend',
+          'the gate spins upwind',
+        ],
+        0.82,
+        1.02,
+        {
+          label: 'Prairie Spin',
+          prompt: 'Spin the blades',
+          activePrompt: 'Wind is awake',
+          reactionType: 'prairie-spin',
+          activationLines: [
+            'Small blades spin fast',
+            'prairie lights dance toward the gate',
+            'you gained 8 harmony',
+          ],
+          revisitLines: [
+            'The prairie spins on',
+            'blue lights drift across the grass',
+            'the gate waits upwind',
+          ],
+        }
+      ),
     },
     decorations: {
       far: [
