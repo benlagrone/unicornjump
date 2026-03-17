@@ -8,6 +8,28 @@ const createDecoration = (type, x, y, width, height, color, extra = {}) => ({
   ...extra,
 });
 
+const createLandingLayout = (creatureX, villageX, landmarkX, gateX, playerX = 0.42) => ({
+  creatureX,
+  villageX,
+  landmarkX,
+  gateX,
+  playerX,
+});
+
+const createVillageSpot = (
+  name,
+  type,
+  dialogLines,
+  widthScale = 0.88,
+  heightScale = 0.82
+) => ({
+  name,
+  type,
+  dialogLines,
+  widthScale,
+  heightScale,
+});
+
 export const BIOMES = [
   {
     id: 'lantern-bamboo-valley',
@@ -40,15 +62,15 @@ export const BIOMES = [
       type: 'fox',
       name: 'Lantern Fox',
       greeting: 'Ni hao! Hello, Garden Messenger!',
-      prompt: 'Could you gather 3 lantern seeds so the valley can glow tonight?',
-      reminder: 'The seeds are twinkling on the higher bridges.',
+      prompt: 'Could you gather 3 lantern hearts so the valley can glow tonight?',
+      reminder: 'The hearts are twinkling on the higher bridges.',
       thanks: 'The valley shines again. Please carry my guiding light onward.',
     },
     quest: {
       id: 'lantern-seeds',
       itemType: 'seed',
-      itemLabel: 'lantern seed',
-      itemPlural: 'lantern seeds',
+      itemLabel: 'lantern heart',
+      itemPlural: 'lantern hearts',
       total: 3,
       hudLabel: 'Glow Restored',
       collectVerb: 'Gather',
@@ -60,6 +82,22 @@ export const BIOMES = [
       ability: 'Reveals guiding lights on special platforms.',
       effect: 'guide-lights',
       badge: 'GF',
+    },
+    landing: {
+      platformName: 'Lantern Landing',
+      gateName: 'Sky Lantern Gate',
+      landmarkName: 'Lantern Stand',
+      layout: createLandingLayout(0.16, 0.38, 0.61, 0.84, 0.34),
+      landmarkDialog: [
+        'Lantern lights rest low',
+        'kind hellos wake the sky pathway',
+        'the fox keeps watch nearby',
+      ],
+      village: createVillageSpot('Tea Table', 'tea-table', [
+        'Warm tea waits here',
+        'small bridge talk drifts through the mist',
+        'the lantern gate glows east',
+      ]),
     },
     decorations: {
       far: [
@@ -134,6 +172,22 @@ export const BIOMES = [
       effect: 'gentle-breeze',
       badge: 'WS',
     },
+    landing: {
+      platformName: 'Heather Landing',
+      gateName: 'Breeze Arch',
+      landmarkName: 'Stone Circle',
+      layout: createLandingLayout(0.18, 0.56, 0.36, 0.82, 0.32),
+      landmarkDialog: [
+        'Old stones hum hello',
+        'soft songs wake when friends feel heard',
+        'the arch opens in wind',
+      ],
+      village: createVillageSpot('Wool Cart', 'wool-cart', [
+        'Soft wool rests here',
+        'hill folk trade songs by the path',
+        'the breeze arch waits ahead',
+      ]),
+    },
     decorations: {
       far: [
         createDecoration('hill', 0.02, 0.18, 0.48, 0.2, 'rgba(84, 123, 116, 0.22)'),
@@ -203,6 +257,22 @@ export const BIOMES = [
       ability: 'Grows wider rescue leaves beneath the unicorn.',
       effect: 'leaf-bloom',
       badge: 'BS',
+    },
+    landing: {
+      platformName: 'Story Landing',
+      gateName: 'Page Arch',
+      landmarkName: 'Story Tree',
+      layout: createLandingLayout(0.2, 0.42, 0.68, 0.86, 0.34),
+      landmarkDialog: [
+        'Paper leaves lean close',
+        'little tales wake after kindness',
+        'the page arch waits ahead',
+      ],
+      village: createVillageSpot('Mushroom House', 'mushroom-house', [
+        'Round lamps glow here',
+        'quiet tales curl under the cap',
+        'the page arch waits right',
+      ], 0.96, 0.92),
     },
     decorations: {
       far: [
@@ -276,6 +346,22 @@ export const BIOMES = [
       effect: 'joy-chime',
       badge: 'SB',
     },
+    landing: {
+      platformName: 'Sun Landing',
+      gateName: 'Golden Arbor',
+      landmarkName: 'Citrus Arbor',
+      layout: createLandingLayout(0.16, 0.42, 0.64, 0.85, 0.32),
+      landmarkDialog: [
+        'Warm fruit lights sway low',
+        'small bird songs wake the bright path',
+        'gold arches glow ahead',
+      ],
+      village: createVillageSpot('Mirror Stand', 'mirror-stand', [
+        'Bright glass waits here',
+        'sun paths sharpen in warm gold',
+        'the arbor shines east',
+      ], 0.76, 0.88),
+    },
     decorations: {
       far: [
         createDecoration('hill', 0.04, 0.2, 0.38, 0.18, 'rgba(196, 124, 56, 0.14)'),
@@ -347,6 +433,22 @@ export const BIOMES = [
       ability: 'Gently pulls nearby treasures toward the unicorn.',
       effect: 'firefly-magnet',
       badge: 'FF',
+    },
+    landing: {
+      platformName: 'Prairie Landing',
+      gateName: 'Windmill Gate',
+      landmarkName: 'Bluebonnet Patch',
+      layout: createLandingLayout(0.2, 0.72, 0.5, 0.87, 0.34),
+      landmarkDialog: [
+        'Bluebonnets nod bright',
+        'firefly wishes wake with care',
+        'the prairie gate will spin',
+      ],
+      village: createVillageSpot('Windmill Post', 'windmill-post', [
+        'Small blades turn here',
+        'field folk watch the tall grass bend',
+        'the gate spins upwind',
+      ], 0.82, 1.02),
     },
     decorations: {
       far: [
