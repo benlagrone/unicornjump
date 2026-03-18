@@ -144,10 +144,9 @@ This separate checkout is intentional. The existing `/root/workspace/fortress-ph
 These are the main gaps before this becomes a stronger release pipeline:
 
 1. add real frontend tests under `unicorn-jump/src`
-2. optionally add an automatic promotion trigger from `unicornjump` to `fortress-phronesis`
-3. add branch protection that requires the build workflow on `main`
-4. decide whether deploys should remain click-to-deploy or auto-deploy after green builds
-4. decide whether rapid consecutive pushes should queue every deploy or skip older ones
+2. add branch protection that requires the build workflow on `main`
+3. decide whether rapid consecutive pushes should queue every deploy or skip older ones
+4. replace the current cross-repo dispatch token with a narrower purpose-built token if you want tighter isolation
 
 ## Last Known Validation
 
