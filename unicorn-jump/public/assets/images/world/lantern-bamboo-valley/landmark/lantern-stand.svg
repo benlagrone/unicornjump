@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  
+<defs>
+  <linearGradient id="bamboo-wood" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#a77a56"/>
+    <stop offset="1" stop-color="#6f4c33"/>
+  </linearGradient>
+  <linearGradient id="bamboo-lantern" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#fff7d1"/>
+    <stop offset=".55" stop-color="#ffd67a"/>
+    <stop offset="1" stop-color="#f29f38"/>
+  </linearGradient>
+  <radialGradient id="bamboo-glow" cx=".5" cy=".46" r=".62">
+    <stop offset="0" stop-color="#fff8da"/>
+    <stop offset=".58" stop-color="#ffd27c" stop-opacity=".72"/>
+    <stop offset="1" stop-color="#ffd27c" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+
+  
+  <ellipse cx="48" cy="88" rx="20" ry="4.5" fill="#5a4a3d" opacity=".16"/>
+  <rect x="44" y="14" width="8" height="62" rx="4" fill="url(#bamboo-wood)" stroke="#5c3f2b" stroke-width="2.6"/>
+  <path d="M28 28h40" fill="none" stroke="#7a573a" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M34 28v12M62 28v14M48 18v10" fill="none" stroke="#6f4c33" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="48" cy="44" r="18" fill="url(#bamboo-glow)" opacity=".58"/>
+  <path d="M41 36h14v20c0 4.8-3 7.6-7 7.6s-7-2.8-7-7.6z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M29 38h12v15c0 4.2-2.5 6.2-6 6.2s-6-2-6-6.2z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M55 40h12v16c0 4.2-2.5 6.2-6 6.2s-6-2-6-6.2z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="36" y="74" width="24" height="8" rx="4" fill="#6a4a31"/>
+  
+</svg>

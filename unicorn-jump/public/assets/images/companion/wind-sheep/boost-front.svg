@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="wool" cx=".42" cy=".28" r=".95">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset=".62" stop-color="#f3fbf7"/>
+      <stop offset="1" stop-color="#d8eee5"/>
+    </radialGradient>
+    <linearGradient id="face" x1=".5" y1="0" x2=".5" y2="1">
+      <stop offset="0" stop-color="#d4dce4"/>
+      <stop offset="1" stop-color="#95a3af"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="34" cy="54" rx="15" ry="4.8" fill="#bfded3" opacity=".22"/>
+  <path d="M10 44c6 2 12 2 18 1M8 49c10 4 20 5 31 2" fill="none" stroke="#88d2bd" stroke-width="2.4" stroke-linecap="round" opacity=".82"/>
+  <circle cx="24" cy="32" r="9" fill="url(#wool)" stroke="#6f8890" stroke-width="2.3"/>
+  <circle cx="34" cy="23" r="10" fill="url(#wool)" stroke="#6f8890" stroke-width="2.3"/>
+  <circle cx="45" cy="31" r="9" fill="url(#wool)" stroke="#6f8890" stroke-width="2.3"/>
+  <circle cx="35" cy="38" r="10" fill="url(#wool)" stroke="#6f8890" stroke-width="2.3"/>
+  <path d="M25 22c-1.2-4.6.6-8 4-9.8.4 4 2 6.6 4.7 8.6" fill="none" stroke="#d9b98c" stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M45 22c1.2-4.6-.6-8-4-9.8-.4 4-2 6.6-4.7 8.6" fill="none" stroke="#d9b98c" stroke-width="3.4" stroke-linecap="round"/>
+  <ellipse cx="35" cy="34" rx="10" ry="11" fill="url(#face)" stroke="#6f8890" stroke-width="2.7"/>
+  <ellipse cx="35" cy="39" rx="6.8" ry="4.6" fill="#edf4f7"/>
+  <circle cx="31" cy="31.5" r="1.8" fill="#17324d"/>
+  <circle cx="39" cy="31.5" r="1.8" fill="#17324d"/>
+  <ellipse cx="35" cy="38.5" rx="1.8" ry="1.4" fill="#6c7b87"/>
+  <path d="M32.5 42c1.8 1.8 3.2 1.8 5 0" fill="none" stroke="#6c7b87" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M42 46c6-1 10-3 14-8M39 51c8-1 14-4 19-9" fill="none" stroke="#b8f0df" stroke-width="2.2" stroke-linecap="round"/>
+</svg>

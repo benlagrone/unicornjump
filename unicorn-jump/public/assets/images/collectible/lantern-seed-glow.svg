@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="lantern-heart-halo" cx=".5" cy=".44" r=".76">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".98"/>
+      <stop offset=".35" stop-color="#ffe7fb" stop-opacity=".88"/>
+      <stop offset=".68" stop-color="#ffb8e9" stop-opacity=".42"/>
+      <stop offset="1" stop-color="#ffb8e9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="lantern-heart-shell" x1=".2" y1=".12" x2=".8" y2=".88">
+      <stop offset="0" stop-color="#ff9fd2"/>
+      <stop offset=".46" stop-color="#ff54b8"/>
+      <stop offset="1" stop-color="#d81888"/>
+    </linearGradient>
+    <linearGradient id="lantern-heart-rainbow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff97d2"/>
+      <stop offset=".18" stop-color="#ffa4ff"/>
+      <stop offset=".38" stop-color="#ffe066"/>
+      <stop offset=".58" stop-color="#a8f58a"/>
+      <stop offset=".78" stop-color="#6fdcff"/>
+      <stop offset="1" stop-color="#98a1ff"/>
+    </linearGradient>
+    <clipPath id="lantern-heart-clip">
+      <path d="M32 52c-1.8 0-4.5-1.6-8.2-4.5C17.4 42.3 12 37 12 27.6 12 20.4 17 15 23.8 15c4 0 6.8 1.8 8.2 5 1.4-3.2 4.2-5 8.2-5C47 15 52 20.4 52 27.6c0 9.4-5.4 14.7-11.8 19.9C36.5 50.4 33.8 52 32 52z"/>
+    </clipPath>
+  </defs>
+  <circle cx="32" cy="31" r="24" fill="url(#lantern-heart-halo)"/>
+  <ellipse cx="32" cy="56" rx="13" ry="4.4" fill="#ff8de1" opacity=".28"/>
+  <path d="M32 52c-1.8 0-4.5-1.6-8.2-4.5C17.4 42.3 12 37 12 27.6 12 20.4 17 15 23.8 15c4 0 6.8 1.8 8.2 5 1.4-3.2 4.2-5 8.2-5C47 15 52 20.4 52 27.6c0 9.4-5.4 14.7-11.8 19.9C36.5 50.4 33.8 52 32 52z" fill="url(#lantern-heart-shell)" stroke="#b11574" stroke-width="3" stroke-linejoin="round"/>
+  <g clip-path="url(#lantern-heart-clip)">
+    <path d="M8 34.2c8.8-7.5 17.7-11.2 26.7-11.2 8.5 0 16.6 2.9 24.3 8.7l-4.1 10.6H15.3z" fill="url(#lantern-heart-rainbow)" opacity=".98"/>
+    <path d="M17 41.8c6.5-4.8 12.8-7.2 18.8-7.2 6.1 0 11.3 1.7 15.8 5.1l-1.6 5.7H19.8z" fill="#fff6fd" opacity=".18"/>
+  </g>
+  <path d="M28 20c-4.2-1.5-8.2.1-10.1 3.8-2.2 4.4-1.1 8.8 3.7 13.7" fill="none" stroke="#ffdef2" stroke-width="2.4" stroke-linecap="round" opacity=".95"/>
+  <path d="M24 23c1.8-.9 3.9-.7 5.7.4" fill="none" stroke="#fff9ff" stroke-width="1.8" stroke-linecap="round" opacity=".94"/>
+  <circle cx="24.8" cy="23.6" r="1.8" fill="#fffaff"/>
+  <path d="M32 7v5M32 53v4M10 31h5M49 31h5M18 16l3 3M43 42l3 3M46 17l-3 3M21 43l-3 3" fill="none" stroke="#ffe78d" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M44 12l2.3 3.2-2.3 3.2-2.3-3.2zM16 37l2.1 2.9-2.1 2.9-2.1-2.9z" fill="#fffaf9" opacity=".92"/>
+</svg>

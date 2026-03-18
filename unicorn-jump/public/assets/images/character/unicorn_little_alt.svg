@@ -1,0 +1,248 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="coat" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#fffef6"/>
+      <stop offset="0.58" stop-color="#fff8ea"/>
+      <stop offset="1" stop-color="#d7dcff"/>
+    </linearGradient>
+    <linearGradient id="coatShade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#b9b7ff" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="mane" x1="0.08" y1="0.15" x2="0.9" y2="0.9">
+      <stop offset="0" stop-color="#ffd7a8"/>
+      <stop offset="0.26" stop-color="#ff96c4"/>
+      <stop offset="0.52" stop-color="#8df2ff"/>
+      <stop offset="0.76" stop-color="#99b4ff"/>
+      <stop offset="1" stop-color="#b88cff"/>
+    </linearGradient>
+    <linearGradient id="wing" x1="0.15" y1="0.1" x2="0.9" y2="0.9">
+      <stop offset="0" stop-color="#fff9df"/>
+      <stop offset="0.48" stop-color="#fffef8"/>
+      <stop offset="0.74" stop-color="#baf4ff"/>
+      <stop offset="1" stop-color="#8ab6ff"/>
+    </linearGradient>
+    <linearGradient id="eye" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#2031a0"/>
+      <stop offset="0.3" stop-color="#1e64db"/>
+      <stop offset="0.68" stop-color="#1ed0ea"/>
+      <stop offset="1" stop-color="#6cf7ff"/>
+    </linearGradient>
+    <linearGradient id="horn" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffce7"/>
+      <stop offset="0.3" stop-color="#8cf6ff"/>
+      <stop offset="0.62" stop-color="#9fb3ff"/>
+      <stop offset="1" stop-color="#d08cff"/>
+    </linearGradient>
+    <linearGradient id="hoof" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#ffabc4"/>
+      <stop offset="1" stop-color="#f04c97"/>
+    </linearGradient>
+    <radialGradient id="cheek" cx="0.5" cy="0.5" r="0.6">
+      <stop offset="0" stop-color="#ffb5cf" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ffb5cf" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#72518f" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <ellipse cx="128" cy="231" rx="70" ry="13" fill="#f6a6d3" opacity="0.28"/>
+
+  <g filter="url(#shadow)">
+    <g transform="translate(15 12)">
+      <path
+        d="M44 128c-18-2-36 14-37 33-1 15 12 25 28 20 10-3 17-11 25-19l9-11-25-23z"
+        fill="url(#wing)"
+        stroke="#7250b0"
+        stroke-width="6"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M44 128c-14 3-24 12-27 24 8-7 16-12 25-13"
+        fill="none"
+        stroke="#ffffff"
+        stroke-opacity="0.85"
+        stroke-width="5"
+        stroke-linecap="round"
+      />
+      <path
+        d="M57 142c-11 2-23 12-26 22 13-8 22-9 31-8"
+        fill="none"
+        stroke="#ffffff"
+        stroke-opacity="0.85"
+        stroke-width="4.5"
+        stroke-linecap="round"
+      />
+    </g>
+
+    <g transform="translate(241 12) scale(-1 1)">
+      <path
+        d="M44 128c-18-2-36 14-37 33-1 15 12 25 28 20 10-3 17-11 25-19l9-11-25-23z"
+        fill="url(#wing)"
+        stroke="#7250b0"
+        stroke-width="6"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M44 128c-14 3-24 12-27 24 8-7 16-12 25-13"
+        fill="none"
+        stroke="#ffffff"
+        stroke-opacity="0.85"
+        stroke-width="5"
+        stroke-linecap="round"
+      />
+      <path
+        d="M57 142c-11 2-23 12-26 22 13-8 22-9 31-8"
+        fill="none"
+        stroke="#ffffff"
+        stroke-opacity="0.85"
+        stroke-width="4.5"
+        stroke-linecap="round"
+      />
+    </g>
+
+    <path
+      d="M160 196c20 3 33 15 33 28 0 12-11 18-25 15-10-3-17-13-26-24l18-19z"
+      fill="url(#mane)"
+      stroke="#724aa8"
+      stroke-width="6"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M169 204c11 3 18 11 18 18 0 6-5 11-12 10-5-1-10-7-14-14z"
+      fill="#9ef0ff"
+      opacity="0.42"
+    />
+
+    <ellipse cx="128" cy="164" rx="58" ry="48" fill="url(#coat)" stroke="#7250b0" stroke-width="6"/>
+    <path
+      d="M88 145c-9 10-14 25-14 39 0 22 16 42 44 42 28 0 47-18 55-39-14 10-29 13-48 13-16 0-28-5-37-11z"
+      fill="#d7d8ff"
+      opacity="0.52"
+    />
+    <ellipse cx="128" cy="173" rx="33" ry="17" fill="#fff9ec" opacity="0.72"/>
+
+    <path
+      d="M95 91c-4-29 15-49 39-52 27-4 52 16 56 43 4 28-16 52-46 56-28 4-45-17-49-47z"
+      fill="url(#mane)"
+      opacity="0.92"
+    />
+    <path
+      d="M125 42c18-4 42 11 47 30-19-11-39-7-55 4-10 7-16 17-20 28-7-26 6-54 28-62z"
+      fill="#fff3c3"
+      opacity="0.36"
+    />
+    <path
+      d="M125 17 139 31 136 49 132 88 121 85 118 49 111 31 121 18z"
+      fill="url(#horn)"
+      stroke="#7250b0"
+      stroke-width="6"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M124 21 132 32 129 47 126 81 121 79 119 47 115 31 121 22z"
+      fill="#fff7cd"
+      opacity="0.44"
+    />
+    <path
+      d="M114 34l23-6M116 47l20-6M118 60l17-5M120 73l13-4"
+      fill="none"
+      stroke="#ffffff"
+      stroke-opacity="0.8"
+      stroke-width="3.4"
+      stroke-linecap="round"
+    />
+    <path d="M101 90c8-11 19-18 33-21M111 101c11-8 23-12 37-13" fill="none" stroke="#fff9d3" stroke-opacity="0.46" stroke-width="3.2" stroke-linecap="round"/>
+
+    <g transform="translate(55 60)">
+      <path d="M0 28c4-18 18-31 35-31 13 0 21 7 26 19L39 38 0 28z" fill="url(#coat)" stroke="#7250b0" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M18 18c8-8 20-9 29-3-6 0-11 1-17 5-4 2-7 5-9 9" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="4" stroke-linecap="round"/>
+      <path d="M29 15c6 0 11 4 14 11-8-3-13-3-18 0" fill="#ff8fc0" opacity="0.78"/>
+      <path d="M12 28c10-2 18 0 27 6M16 39c8-1 15 1 21 5" fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(201 60) scale(-1 1)">
+      <path d="M0 28c4-18 18-31 35-31 13 0 21 7 26 19L39 38 0 28z" fill="url(#coat)" stroke="#7250b0" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M18 18c8-8 20-9 29-3-6 0-11 1-17 5-4 2-7 5-9 9" fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="4" stroke-linecap="round"/>
+      <path d="M29 15c6 0 11 4 14 11-8-3-13-3-18 0" fill="#ff8fc0" opacity="0.78"/>
+      <path d="M12 28c10-2 18 0 27 6M16 39c8-1 15 1 21 5" fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="3" stroke-linecap="round"/>
+    </g>
+
+    <path
+      d="M87 102c10-18 27-30 49-30 25 0 47 17 53 40 6 25-13 57-61 61-48 4-77-17-80-47-2-15 4-28 13-38 7-8 17-13 26-15z"
+      fill="url(#coat)"
+      stroke="#7250b0"
+      stroke-width="6"
+    />
+    <path d="M95 102c11-13 25-21 44-21 31 0 53 16 53 37 0 5-1 10-3 15 0-26-21-41-48-41-18 0-33 5-46 10z" fill="#ffffff" opacity="0.46"/>
+
+    <path
+      d="M114 88c9-11 20-17 33-19-4 8-4 16-1 23 3 7 8 13 16 19-11 4-21 3-30-1-3 7-7 12-12 16-9-7-13-15-12-24 0-5 2-10 6-14z"
+      fill="url(#mane)"
+      stroke="#7250b0"
+      stroke-width="5"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M124 86c11-3 22 0 30 7-9 1-17 4-23 9-4 3-7 6-10 10-5-8-4-17 3-26z"
+      fill="#fff7cb"
+      opacity="0.36"
+    />
+    <path
+      d="M121 96c8-7 18-11 28-11M123 108c10-4 20-5 29-3M121 116c7-1 13 0 19 3"
+      fill="none"
+      stroke="#fff9d7"
+      stroke-opacity="0.45"
+      stroke-width="3"
+      stroke-linecap="round"
+    />
+
+    <ellipse cx="95" cy="130" rx="21" ry="26" fill="#0c0d2a"/>
+    <ellipse cx="161" cy="130" rx="21" ry="26" fill="#0c0d2a"/>
+    <ellipse cx="95" cy="133" rx="16" ry="20" fill="url(#eye)"/>
+    <ellipse cx="161" cy="133" rx="16" ry="20" fill="url(#eye)"/>
+    <circle cx="89" cy="123" r="6" fill="#ffffff"/>
+    <circle cx="100" cy="132" r="3.8" fill="#ffffff"/>
+    <circle cx="155" cy="123" r="6" fill="#ffffff"/>
+    <circle cx="166" cy="132" r="3.8" fill="#ffffff"/>
+    <path d="M77 111c8-12 20-14 28-2" fill="none" stroke="#1d1b59" stroke-width="5" stroke-linecap="round"/>
+    <path d="M151 109c8-10 18-10 26 1" fill="none" stroke="#1d1b59" stroke-width="5" stroke-linecap="round"/>
+
+    <ellipse cx="86" cy="147" rx="17" ry="13" fill="url(#cheek)"/>
+    <ellipse cx="170" cy="147" rx="17" ry="13" fill="url(#cheek)"/>
+
+    <path
+      d="M111 137c5-6 14-9 24-8 10 0 18 3 21 9 3 6-1 14-9 18-7 4-19 4-28 0-8-4-11-12-8-19z"
+      fill="#f7b7c8"
+      stroke="#c76f98"
+      stroke-width="3"
+      stroke-linejoin="round"
+    />
+    <path d="M117 135c6-3 18-3 25 0" fill="none" stroke="#fff1f6" stroke-width="2.4" stroke-linecap="round" opacity="0.8"/>
+    <ellipse cx="122" cy="144" rx="2.8" ry="3.8" fill="#7f4c67"/>
+    <ellipse cx="136" cy="144" rx="2.8" ry="3.8" fill="#7f4c67"/>
+    <path d="M124 151c3 2 7 2 10 0" fill="none" stroke="#a35e7d" stroke-width="2.4" stroke-linecap="round"/>
+
+    <path d="M92 179c8 14 8 29 7 39" fill="none" stroke="#b9bfff" stroke-width="11" stroke-linecap="round"/>
+    <path d="M164 179c0 15-1 28-4 39" fill="none" stroke="#b9bfff" stroke-width="11" stroke-linecap="round"/>
+    <path d="M99 174c-2 14-2 28-2 45" fill="none" stroke="#ffffff" stroke-opacity="0.72" stroke-width="5" stroke-linecap="round"/>
+    <path d="M160 174c2 14 2 28 0 45" fill="none" stroke="#ffffff" stroke-opacity="0.72" stroke-width="5" stroke-linecap="round"/>
+
+    <rect x="84" y="209" width="26" height="21" rx="11" fill="url(#hoof)" stroke="#8f2f74" stroke-width="5"/>
+    <rect x="112" y="212" width="31" height="19" rx="10" fill="url(#hoof)" stroke="#8f2f74" stroke-width="5"/>
+    <rect x="146" y="209" width="26" height="21" rx="11" fill="url(#hoof)" stroke="#8f2f74" stroke-width="5"/>
+    <ellipse cx="96" cy="214" rx="3.2" ry="1.8" fill="#fff7f9" opacity="0.86"/>
+    <ellipse cx="127" cy="216" rx="3.2" ry="1.8" fill="#fff7f9" opacity="0.86"/>
+    <ellipse cx="158" cy="214" rx="3.2" ry="1.8" fill="#fff7f9" opacity="0.86"/>
+
+    <path d="M58 191c-9 5-15 13-15 22 0 7 5 13 13 13 7 0 15-3 24-13l-22-22z" fill="url(#mane)" stroke="#724aa8" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M65 198c-6 5-9 10-9 15 0 5 3 8 8 8 4 0 8-2 13-8z" fill="#fff6c8" opacity="0.32"/>
+
+    <path d="M176 85c5-3 11-3 15 1 5 5 4 12-3 16-7 4-15 2-18-4-2-5 0-10 6-13z" fill="#ffffff" stroke="#6a59cc" stroke-width="5"/>
+    <path d="M185 83v16M177 91h16" fill="none" stroke="#6a59cc" stroke-width="5" stroke-linecap="round"/>
+    <path d="M73 154l5 6-5 6-5-6zM183 153l4 5-4 5-4-5z" fill="#fff5ff" opacity="0.66"/>
+
+    <path d="M101 186c3-3 7-5 11-4-2 5-5 8-11 9z" fill="#ffffff" opacity="0.8"/>
+    <path d="M150 186c-3-3-7-5-11-4 2 5 5 8 11 9z" fill="#ffffff" opacity="0.8"/>
+  </g>
+</svg>

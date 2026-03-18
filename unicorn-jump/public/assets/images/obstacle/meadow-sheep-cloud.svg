@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="ram-bird-glow" cx=".5" cy=".45" r=".7">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>
+      <stop offset=".58" stop-color="#dbf8ec" stop-opacity=".54"/>
+      <stop offset="1" stop-color="#dbf8ec" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ram-bird-wool" x1=".2" y1=".08" x2=".82" y2=".94">
+      <stop offset="0" stop-color="#fffefb"/>
+      <stop offset=".62" stop-color="#edf8f1"/>
+      <stop offset="1" stop-color="#c9e7d8"/>
+    </linearGradient>
+    <linearGradient id="ram-bird-face" x1=".35" y1=".1" x2=".74" y2=".94">
+      <stop offset="0" stop-color="#dbe4ea"/>
+      <stop offset="1" stop-color="#8a9aa5"/>
+    </linearGradient>
+    <linearGradient id="ram-bird-wing" x1=".18" y1=".14" x2=".86" y2=".86">
+      <stop offset="0" stop-color="#f9fffd"/>
+      <stop offset=".56" stop-color="#dff4ea"/>
+      <stop offset="1" stop-color="#8ecbb0"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="64" cy="112" rx="27" ry="8" fill="#52786b" opacity=".14"/>
+  <circle cx="64" cy="58" r="37" fill="url(#ram-bird-glow)"/>
+  <path d="M28 69c0-12 7-22 20-29 8-4 17-6 24-5-8 7-12 15-13 24-1 8 1 16 5 25-16 0-26-4-36-15z" fill="url(#ram-bird-wing)" stroke="#6d9682" stroke-width="4.2" stroke-linejoin="round"/>
+  <path d="M79 45c15 1 25 8 31 22-11-1-20 1-28 7-5 4-8 9-11 14-6-11-4-23 8-43z" fill="url(#ram-bird-wing)" stroke="#6d9682" stroke-width="4.2" stroke-linejoin="round"/>
+  <circle cx="51" cy="68" r="16" fill="url(#ram-bird-wool)" stroke="#6d9682" stroke-width="4"/>
+  <circle cx="67" cy="61" r="17" fill="url(#ram-bird-wool)" stroke="#6d9682" stroke-width="4"/>
+  <circle cx="84" cy="68" r="16" fill="url(#ram-bird-wool)" stroke="#6d9682" stroke-width="4"/>
+  <circle cx="62" cy="82" r="17" fill="url(#ram-bird-wool)" stroke="#6d9682" stroke-width="4"/>
+  <circle cx="79" cy="82" r="17" fill="url(#ram-bird-wool)" stroke="#6d9682" stroke-width="4"/>
+  <path d="M53 47c-5-8-5-16 0-23 4 7 8 12 14 16" fill="none" stroke="#d9bb94" stroke-width="6" stroke-linecap="round"/>
+  <path d="M88 47c6-8 6-16 1-23-4 7-9 12-15 16" fill="none" stroke="#d9bb94" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="70" cy="77" rx="20" ry="22" fill="url(#ram-bird-face)" stroke="#6d9682" stroke-width="4.2"/>
+  <ellipse cx="70" cy="86" rx="13" ry="9" fill="#eef4f7"/>
+  <ellipse cx="63" cy="74" rx="4.2" ry="5.8" fill="#17324d"/>
+  <ellipse cx="80" cy="74" rx="4.2" ry="5.8" fill="#17324d"/>
+  <circle cx="64" cy="72" r="1.3" fill="#fff"/>
+  <circle cx="81" cy="72" r="1.3" fill="#fff"/>
+  <ellipse cx="60" cy="83" rx="4.2" ry="2.2" fill="#f2a7b7" opacity=".34"/>
+  <ellipse cx="82" cy="83" rx="4.2" ry="2.2" fill="#f2a7b7" opacity=".34"/>
+  <path d="M71 82l11 4-10 7z" fill="#fef7e9" stroke="#8798a3" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M65 92c4 4 8 4 12 0" fill="none" stroke="#6f808a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M44 97c-10 8-13 14-10 19 4 5 13 4 22-2l5-14-17-3z" fill="url(#ram-bird-face)" stroke="#6d9682" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M79 100c9 4 16 9 22 16 9 0 14-2 16-6 2-6-4-12-17-20l-21 10z" fill="url(#ram-bird-face)" stroke="#6d9682" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M31 72c6 2 10 3 15 2M92 44c5 1 10 4 14 9" fill="none" stroke="#fffef8" stroke-width="2.4" stroke-linecap="round" opacity=".76"/>
+  <path d="M32 94c5 4 10 6 17 8M91 96c5 3 10 5 16 10" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity=".56"/>
+</svg>

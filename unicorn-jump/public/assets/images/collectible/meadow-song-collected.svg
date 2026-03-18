@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="song-gem-faded" x1=".16" y1=".14" x2=".86" y2=".88">
+      <stop offset="0" stop-color="#f3deee"/>
+      <stop offset=".22" stop-color="#f2e5c6"/>
+      <stop offset=".48" stop-color="#d7eee2"/>
+      <stop offset=".74" stop-color="#d7e8fb"/>
+      <stop offset="1" stop-color="#cfcff0"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="32" cy="56" rx="12.5" ry="4.2" fill="#d3d7ef" opacity=".18"/>
+  <path d="M19 21 32 11l13 10-4 21H23z" fill="#f7f7fb" stroke="#a2aac9" stroke-width="2.6" stroke-linejoin="round" opacity=".95"/>
+  <path d="M32 13.8 42.6 22 39.4 39.8H24.6L21.4 22z" fill="url(#song-gem-faded)" opacity=".82"/>
+  <path d="M32 13.8v26M21.4 22h21.2M24.6 39.8 32 22l7.4 17.8" fill="none" stroke="#fffdfd" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity=".68"/>
+  <path d="M30 21v12.5c0 2.3-1.5 3.9-3.8 3.9-1.8 0-3.1-1.1-3.1-2.7 0-1.7 1.4-2.9 3.5-2.9.7 0 1.1.1 1.9.3V22l8-1.4v10c0 2.2-1.5 3.9-3.8 3.9-1.8 0-3.1-1.1-3.1-2.7 0-1.7 1.4-2.9 3.5-2.9.7 0 1.1.1 1.9.3V24z" fill="#fdf7fb" stroke="#8e8bac" stroke-width="1.65" stroke-linejoin="round" opacity=".84"/>
+  <path d="M45 15l1.9 2.7-1.9 2.7-1.9-2.7zM17 37l1.7 2.4-1.7 2.4-1.7-2.4z" fill="#fffefe" opacity=".74"/>
+</svg>

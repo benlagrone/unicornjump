@@ -1,20 +1,29 @@
 const clampIndex = (index, length) => Math.min(length - 1, Math.max(0, index));
 
-export const createCreatureEncounter = (biome, platforms) => {
+const DEFAULT_CREATURE_WIDTH = 68;
+const DEFAULT_CREATURE_HEIGHT = 54;
+const DEFAULT_INTERACTION_RADIUS = 116;
+
+export const createCreatureEncounter = (biome, platforms, sizeConfig = {}) => {
   const anchorIndex = clampIndex(platforms.length - 4, platforms.length);
   const platform = platforms[anchorIndex];
+  const width = sizeConfig.width ?? DEFAULT_CREATURE_WIDTH;
+  const height = sizeConfig.height ?? DEFAULT_CREATURE_HEIGHT;
+  const interactionRadius = sizeConfig.interactionRadius ?? DEFAULT_INTERACTION_RADIUS;
 
   return {
     ...biome.creature,
     platformId: platform.id,
-    x: platform.x + platform.width / 2 - 34,
-    y: platform.y - 54,
-    width: 68,
-    height: 54,
-    interactionRadius: 116,
+    x: platform.x + platform.width / 2 - width / 2,
+    y: platform.y - height,
+    width,
+    height,
+    interactionRadius,
     met: false,
     thanked: false,
     lastInteractionAt: -2000,
+    reactionStartedAt: -2000,
+    reactionUntil: 0,
   };
 };
 

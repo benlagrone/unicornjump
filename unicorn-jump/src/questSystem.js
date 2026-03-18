@@ -1,18 +1,23 @@
-const ITEM_SIZE = 28;
+const DEFAULT_ITEM_SIZE = 28;
 
-const createQuestItem = (platform, biome, index) => ({
+const createQuestItem = (platform, biome, index, itemSize = DEFAULT_ITEM_SIZE) => ({
   id: `${biome.id}-quest-${index}`,
   type: biome.quest.itemType,
   label: biome.quest.itemLabel,
-  x: platform.x + platform.width / 2 - ITEM_SIZE / 2,
-  y: platform.y - ITEM_SIZE - 12,
-  width: ITEM_SIZE,
-  height: ITEM_SIZE,
+  x: platform.x + platform.width / 2 - itemSize / 2,
+  y: platform.y - itemSize - Math.round(itemSize * 0.4),
+  width: itemSize,
+  height: itemSize,
   collected: false,
   platformId: platform.id,
 });
 
-export const createQuestState = (biome, platforms, creature) => {
+export const createQuestState = (
+  biome,
+  platforms,
+  creature,
+  itemSize = DEFAULT_ITEM_SIZE
+) => {
   const creaturePlatformIndex = platforms.findIndex(
     (platform) => platform.id === creature.platformId
   );
@@ -50,7 +55,7 @@ export const createQuestState = (biome, platforms, creature) => {
   }
 
   const itemPlatforms = pickedIndexes.map((pickedIndex, index) =>
-    createQuestItem(platforms[pickedIndex], biome, index)
+    createQuestItem(platforms[pickedIndex], biome, index, itemSize)
   );
 
   const guidePlatformIds = itemPlatforms.map((item) => item.platformId);

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  
+<defs>
+  <linearGradient id="meadow-wood" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#a27a55"/>
+    <stop offset="1" stop-color="#6c4d35"/>
+  </linearGradient>
+  <linearGradient id="meadow-stone" x1=".22" y1=".08" x2=".88" y2=".92">
+    <stop offset="0" stop-color="#f2f5f0"/>
+    <stop offset=".52" stop-color="#cfd9d3"/>
+    <stop offset="1" stop-color="#8d9b95"/>
+  </linearGradient>
+  <linearGradient id="meadow-wool" x1=".4" y1="0" x2=".6" y2="1">
+    <stop offset="0" stop-color="#ffffff"/>
+    <stop offset="1" stop-color="#e9efe9"/>
+  </linearGradient>
+</defs>
+
+  
+  <ellipse cx="48" cy="86" rx="26" ry="5" fill="#55634b" opacity=".14"/>
+  <rect x="18" y="42" width="50" height="22" rx="6" fill="url(#meadow-wood)" stroke="#5b402e" stroke-width="3"/>
+  <path d="M20 42l9-11h35l8 11" fill="none" stroke="#7e5b3d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="30" cy="72" r="9" fill="none" stroke="#5a4639" stroke-width="4"/>
+  <circle cx="66" cy="72" r="9" fill="none" stroke="#5a4639" stroke-width="4"/>
+  <path d="M30 72l4-4M30 72l-4 4M66 72l4-4M66 72l-4 4" fill="none" stroke="#5a4639" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M29 26c-8 0-13 4.5-13 11 0 7.6 6.6 13 17 13 8.3 0 15.3-3.2 20-8.4-2.2-9.2-10.6-15.6-24-15.6z" fill="url(#meadow-wool)" stroke="#c9d7cf" stroke-width="3"/>
+  <path d="M54 26c9 0 15 6 15 14 0 7.4-5.6 12-14 12-5.4 0-10.2-1.7-14.3-4.6 1.8-12.8 10.3-21.4 13.3-21.4z" fill="url(#meadow-wool)" stroke="#c9d7cf" stroke-width="3"/>
+  
+</svg>

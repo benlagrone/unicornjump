@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="shell-runner-glow" cx=".5" cy=".45" r=".68">
+      <stop offset="0" stop-color="#eff8ff" stop-opacity=".9"/>
+      <stop offset=".56" stop-color="#a2d2ff" stop-opacity=".48"/>
+      <stop offset="1" stop-color="#a2d2ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shell-runner-shell" x1=".18" y1=".08" x2=".86" y2=".94">
+      <stop offset="0" stop-color="#edf4fd"/>
+      <stop offset=".58" stop-color="#a6bddb"/>
+      <stop offset="1" stop-color="#62799f"/>
+    </linearGradient>
+    <linearGradient id="shell-runner-band" x1=".2" y1=".08" x2=".84" y2=".92">
+      <stop offset="0" stop-color="#dde8f6"/>
+      <stop offset="1" stop-color="#7894bd"/>
+    </linearGradient>
+    <linearGradient id="shell-runner-belly" x1=".5" y1="0" x2=".5" y2="1">
+      <stop offset="0" stop-color="#fff8eb"/>
+      <stop offset="1" stop-color="#f1d49f"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="64" cy="112" rx="25" ry="8" fill="#385678" opacity=".16"/>
+  <circle cx="64" cy="58" r="36" fill="url(#shell-runner-glow)"/>
+  <path d="M27 74c4-16 14-25 31-31-5 10-6 20-2 31-9 3-19 4-29 0z" fill="url(#shell-runner-band)" stroke="#405c7d" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M84 39c11 2 18 8 24 20-10 0-18 3-24 9-4 4-7 9-10 15-8-10-7-23 10-44z" fill="url(#shell-runner-band)" stroke="#405c7d" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M44 95c-12 9-17 16-13 22 3 5 14 4 26-3l4-15-17-4z" fill="url(#shell-runner-shell)" stroke="#405c7d" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M79 98c10 4 17 10 24 17 8 0 13-2 15-6 3-6-3-13-18-21l-21 10z" fill="url(#shell-runner-shell)" stroke="#405c7d" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M44 84c0-22 15-41 35-41 18 0 31 14 31 33-2 18-17 31-37 31-18 0-29-8-29-23z" fill="url(#shell-runner-shell)" stroke="#405c7d" stroke-width="5"/>
+  <path d="M49 57c7 1 13 5 18 11M68 50c8 3 13 9 17 17M89 55c4 5 7 10 8 17" fill="none" stroke="url(#shell-runner-band)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M60 47c11-3 24 0 34 8-10 1-19 4-26 10-5 4-8 8-10 14-6-10-6-21 2-32z" fill="#ffffff" opacity=".22"/>
+  <path d="M52 42l11 11-16 2z" fill="#e6edf8" stroke="#405c7d" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M81 42l-10 11 15 2z" fill="#e6edf8" stroke="#405c7d" stroke-width="4" stroke-linejoin="round"/>
+  <ellipse cx="69" cy="76" rx="17" ry="12" fill="url(#shell-runner-belly)"/>
+  <ellipse cx="62" cy="72" rx="4" ry="5.5" fill="#17345c"/>
+  <ellipse cx="80" cy="72" rx="4" ry="5.5" fill="#17345c"/>
+  <circle cx="63" cy="70.5" r="1.2" fill="#fff"/>
+  <circle cx="81" cy="70.5" r="1.2" fill="#fff"/>
+  <path d="M68 78 79 83l-10 7z" fill="#f5efe2" stroke="#405c7d" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M63 86c4 3 8 3 12 0" fill="none" stroke="#405c7d" stroke-width="2.9" stroke-linecap="round"/>
+  <path d="M34 82c7-5 14-7 22-8M84 95c8 1 15 4 23 9" fill="none" stroke="#ddeafe" stroke-width="3" stroke-linecap="round" opacity=".76"/>
+  <path d="M97 39l4 5M104 52l5 2M101 67h6M27 43l4 4M20 57l5 2" fill="none" stroke="#bfe3ff" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

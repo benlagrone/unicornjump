@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  
+<defs>
+  <linearGradient id="story-bark" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#9d734d"/>
+    <stop offset="1" stop-color="#6d4f39"/>
+  </linearGradient>
+  <linearGradient id="story-leaves" x1=".18" y1=".08" x2=".84" y2=".92">
+    <stop offset="0" stop-color="#dff4bb"/>
+    <stop offset=".48" stop-color="#8dcf7e"/>
+    <stop offset="1" stop-color="#4d9a68"/>
+  </linearGradient>
+  <linearGradient id="story-cap" x1=".28" y1=".06" x2=".8" y2=".92">
+    <stop offset="0" stop-color="#ffcfb0"/>
+    <stop offset=".55" stop-color="#ef8b6d"/>
+    <stop offset="1" stop-color="#d76a59"/>
+  </linearGradient>
+  <radialGradient id="story-window" cx=".5" cy=".5" r=".62">
+    <stop offset="0" stop-color="#fff8d3"/>
+    <stop offset="1" stop-color="#ffc864"/>
+  </radialGradient>
+</defs>
+
+  
+  <ellipse cx="48" cy="88" rx="24" ry="5" fill="#53694f" opacity=".14"/>
+  <path d="M43 34c-2-8 0-16 5-22 5 6 7 14 5 22v30H43z" fill="url(#story-bark)" stroke="#5a4031" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M32 70c5-10 10-17 16-22 6 5 11 12 16 22" fill="none" stroke="#6f5543" stroke-width="5" stroke-linecap="round"/>
+  <path d="M18 39c0-13 12-23 30-23s30 10 30 23c0 8-5 16-12 19H30c-7-3-12-11-12-19z" fill="url(#story-leaves)" stroke="#4b8a5d" stroke-width="3"/>
+  <circle cx="34" cy="32" r="6" fill="#fff6d1" opacity=".76"/>
+  <circle cx="58" cy="28" r="5" fill="#fff6d1" opacity=".76"/>
+  <circle cx="63" cy="45" r="4.2" fill="#f7ffdd" opacity=".72"/>
+  <circle cx="27" cy="46" r="3.8" fill="#f7ffdd" opacity=".72"/>
+  <path d="M28 61c4 2 9 3 20 3 11 0 17-1 20-3" fill="none" stroke="#8fc080" stroke-width="4" stroke-linecap="round"/>
+  
+</svg>

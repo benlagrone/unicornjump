@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  
+    <defs>
+      <radialGradient id="sun-drop-glow" cx=".5" cy=".34" r=".84">
+        <stop offset="0" stop-color="#fff9d8"/>
+        <stop offset=".5" stop-color="#ffe18d" stop-opacity=".74"/>
+        <stop offset="1" stop-color="#ffe18d" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="sun-drop-body" x1=".22" y1=".12" x2=".82" y2=".88">
+        <stop offset="0" stop-color="#fff5ab"/>
+        <stop offset=".42" stop-color="#fbbf24"/>
+        <stop offset="1" stop-color="#f97316"/>
+      </linearGradient>
+    </defs>
+    
+  
+    <ellipse cx="32" cy="56" rx="12.8" ry="4.3" fill="#ffd47c" opacity=".22"/>
+    <circle cx="32" cy="28" r="19" fill="url(#sun-drop-glow)" opacity=".24"/>
+    <path d="M32 12c6 8 12 14.4 12 23.4 0 6.8-4.9 12.6-12 12.6s-12-5.8-12-12.6C20 26.4 26 20 32 12z" fill="url(#sun-drop-body)" stroke="#d97706" stroke-width="2.8" stroke-linejoin="round" opacity=".56"/>
+    <path d="M32 18c-4 5.2-7.4 10.2-7.4 16.4 0 5.2 3.5 9.5 7.4 9.5" fill="none" stroke="#fff5d5" stroke-width="2" stroke-linecap="round" opacity=".92"/>
+    <circle cx="26.8" cy="31.2" r="1.8" fill="#7c3a00" opacity=".52"/>
+    <circle cx="37.2" cy="31.2" r="1.8" fill="#7c3a00" opacity=".52"/>
+    <path d="M29.5 36c1.6 1.7 3.4 1.7 5 0" fill="none" stroke="#7c3a00" stroke-width="1.8" stroke-linecap="round" opacity=".52"/>
+    <path d="M47 19l1.8 2.6-1.8 2.6-1.8-2.6z" fill="#d1d5db" opacity=".86"/>
+    
+</svg>

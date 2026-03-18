@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  
+<defs>
+  <radialGradient id="bird-body" cx=".32" cy=".2" r=".95">
+    <stop offset="0" stop-color="#ffe2bf"/>
+    <stop offset=".55" stop-color="#ffb366"/>
+    <stop offset="1" stop-color="#ed7a24"/>
+  </radialGradient>
+  <linearGradient id="bird-wing" x1=".2" y1=".2" x2=".9" y2=".9">
+    <stop offset="0" stop-color="#fff1c7"/>
+    <stop offset=".55" stop-color="#ffc46d"/>
+    <stop offset="1" stop-color="#f08a30"/>
+  </linearGradient>
+  <linearGradient id="bird-belly" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#fffdf7"/>
+    <stop offset="1" stop-color="#ffe0a5"/>
+  </linearGradient>
+  <linearGradient id="bird-beak" x1=".3" y1="0" x2=".8" y2="1">
+    <stop offset="0" stop-color="#fff2a3"/>
+    <stop offset=".55" stop-color="#ffc14b"/>
+    <stop offset="1" stop-color="#eb8e16"/>
+  </linearGradient>
+  <linearGradient id="bird-feet" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#f3a563"/>
+    <stop offset="1" stop-color="#c96b2c"/>
+  </linearGradient>
+  <radialGradient id="bird-sparkle" cx=".35" cy=".35" r=".7">
+    <stop offset="0" stop-color="#fff8c4"/>
+    <stop offset=".6" stop-color="#ffd866"/>
+    <stop offset="1" stop-color="#f0a51d"/>
+  </radialGradient>
+</defs>
+
+  
+    <ellipse cx="65" cy="112" rx="29" ry="8" fill="#dba66d" opacity=".22"/>
+    <path d="M52 104c-1-7 1-12 6-15" fill="none" stroke="#cb742e" stroke-width="3.2" stroke-linecap="round"/>
+    <ellipse cx="52" cy="106" rx="6" ry="3.6" fill="url(#bird-feet)"/>
+    <ellipse cx="74" cy="106" rx="6" ry="3.6" fill="url(#bird-feet)"/>
+    <path d="M95 78c10 4 15 10 17 18-10 2-20 0-27-4z" fill="#d66f28" opacity=".34"/>
+    <ellipse cx="72" cy="82" rx="30" ry="24" fill="url(#bird-body)" stroke="#a46020" stroke-width="5"/>
+    <circle cx="51" cy="56" r="20" fill="url(#bird-body)" stroke="#a46020" stroke-width="5"/>
+    <ellipse cx="62" cy="83" rx="16" ry="20" fill="url(#bird-belly)"/>
+    <path d="M67 76c-5 10-5 20 1 28 14-1 24-8 31-20-6-7-16-11-32-8z" fill="url(#bird-wing)" stroke="#a46020" stroke-width="4.2" stroke-linejoin="round"/>
+    <path d="M62 35c3-8 8-12 14-13-2 7-1 13 1 17" fill="none" stroke="#f7d279" stroke-width="4" stroke-linecap="round"/>
+    <path d="M58 34c1-9 5-14 10-16 0 8 2 13 5 17" fill="none" stroke="#ff9db0" stroke-width="4" stroke-linecap="round"/>
+    <path d="M66 34c6-5 12-7 16-5-3 6-4 11-3 17" fill="none" stroke="#95e2a0" stroke-width="4" stroke-linecap="round"/>
+    <path d="M46 56c4-4 8-4 11 0" fill="none" stroke="#213046" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M32 58 20 53 32 48 46 53z" fill="url(#bird-beak)" stroke="#a85f18" stroke-width="3" stroke-linejoin="round"/>
+    <ellipse cx="42" cy="66" rx="4" ry="2.3" fill="#f5a7b8" opacity=".36"/>
+    <path d="M92 37l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z" fill="url(#bird-sparkle)" stroke="#b17a1d" stroke-width="2" stroke-linejoin="round"/>
+  
+</svg>

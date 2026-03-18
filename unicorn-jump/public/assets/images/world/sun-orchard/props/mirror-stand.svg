@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  
+<defs>
+  <linearGradient id="orchard-wood" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#b77b48"/>
+    <stop offset="1" stop-color="#825126"/>
+  </linearGradient>
+  <linearGradient id="orchard-leaf" x1=".24" y1=".1" x2=".8" y2=".9">
+    <stop offset="0" stop-color="#e5f7b4"/>
+    <stop offset=".5" stop-color="#96d167"/>
+    <stop offset="1" stop-color="#4f9d49"/>
+  </linearGradient>
+  <radialGradient id="orchard-fruit" cx=".45" cy=".34" r=".72">
+    <stop offset="0" stop-color="#fff0b0"/>
+    <stop offset=".45" stop-color="#ffb54d"/>
+    <stop offset="1" stop-color="#f07721"/>
+  </radialGradient>
+  <radialGradient id="orchard-glass" cx=".4" cy=".3" r=".86">
+    <stop offset="0" stop-color="#f8ffff"/>
+    <stop offset=".6" stop-color="#d5eff7"/>
+    <stop offset="1" stop-color="#8ab9d1"/>
+  </radialGradient>
+</defs>
+
+  
+  <ellipse cx="48" cy="87" rx="22" ry="5" fill="#7b5a3a" opacity=".14"/>
+  <rect x="44" y="52" width="8" height="25" rx="4" fill="url(#orchard-wood)" stroke="#6a411e" stroke-width="2.8"/>
+  <path d="M37 77h22" fill="none" stroke="#8c5d2a" stroke-width="5" stroke-linecap="round"/>
+  <ellipse cx="48" cy="34" rx="20" ry="24" fill="url(#orchard-glass)" stroke="#f7b34a" stroke-width="5"/>
+  <path d="M39 27c5-8 11-11 18-9" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+  <circle cx="27" cy="42" r="6" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="2.4"/>
+  <circle cx="69" cy="28" r="5.6" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="2.4"/>
+  <path d="M25 37c2-5 5-8 10-10M62 23c2-5 5-8 10-10" fill="none" stroke="#78af4f" stroke-width="3" stroke-linecap="round"/>
+  
+</svg>

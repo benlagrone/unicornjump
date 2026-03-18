@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  
+<defs>
+  <linearGradient id="gnome-hat" x1=".35" y1="0" x2=".8" y2="1">
+    <stop offset="0" stop-color="#dcc3ff"/>
+    <stop offset=".45" stop-color="#9b74ea"/>
+    <stop offset="1" stop-color="#6b43be"/>
+  </linearGradient>
+  <linearGradient id="gnome-brim" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#f5e9ff"/>
+    <stop offset="1" stop-color="#b59af1"/>
+  </linearGradient>
+  <linearGradient id="gnome-coat" x1=".3" y1="0" x2=".7" y2="1">
+    <stop offset="0" stop-color="#bce59f"/>
+    <stop offset=".45" stop-color="#6faf6b"/>
+    <stop offset="1" stop-color="#427f55"/>
+  </linearGradient>
+  <linearGradient id="gnome-sleeve" x1=".4" y1="0" x2=".6" y2="1">
+    <stop offset="0" stop-color="#cbf0b4"/>
+    <stop offset="1" stop-color="#5d9a67"/>
+  </linearGradient>
+  <linearGradient id="gnome-skin" x1=".35" y1="0" x2=".7" y2="1">
+    <stop offset="0" stop-color="#ffe7d6"/>
+    <stop offset="1" stop-color="#efb899"/>
+  </linearGradient>
+  <linearGradient id="gnome-beard" x1=".3" y1="0" x2=".75" y2="1">
+    <stop offset="0" stop-color="#fffef8"/>
+    <stop offset=".7" stop-color="#f2e0c0"/>
+    <stop offset="1" stop-color="#d5bd96"/>
+  </linearGradient>
+  <linearGradient id="gnome-boot" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#9f7d57"/>
+    <stop offset="1" stop-color="#6b4f37"/>
+  </linearGradient>
+  <radialGradient id="gnome-star" cx=".35" cy=".35" r=".7">
+    <stop offset="0" stop-color="#fff7bf"/>
+    <stop offset=".65" stop-color="#ffd867"/>
+    <stop offset="1" stop-color="#f0aa1c"/>
+  </radialGradient>
+</defs>
+
+  
+    <ellipse cx="62" cy="112" rx="28" ry="8" fill="#a58d67" opacity=".22"/>
+    <ellipse cx="52" cy="104" rx="10" ry="8" fill="url(#gnome-boot)" stroke="#5b4736" stroke-width="3.4"/>
+    <ellipse cx="79" cy="105" rx="9.5" ry="7.5" fill="url(#gnome-boot)" stroke="#5b4736" stroke-width="3.2"/>
+    <path d="M48 81c1-20 15-31 32-31 16 0 28 8 34 22l-4 30H52z" fill="url(#gnome-coat)" stroke="#3f6f4f" stroke-width="4.6" stroke-linejoin="round"/>
+    <path d="M57 88c8 4 16 6 24 5 5-1 11-3 18-8l-1 14H57z" fill="#d9f1c9" opacity=".28"/>
+    <ellipse cx="46" cy="84" rx="7.8" ry="11.8" fill="url(#gnome-sleeve)" stroke="#3f6f4f" stroke-width="4"/>
+    <circle cx="42" cy="90" r="5" fill="url(#gnome-skin)" stroke="#7c6050" stroke-width="3"/>
+    
+    <path d="M48 50c3-18 12-30 26-36 14 3 24 15 30 36l1 4H46z" fill="url(#gnome-hat)" stroke="#60409b" stroke-width="5" stroke-linejoin="round"/>
+    <ellipse cx="72" cy="51" rx="30" ry="8.2" fill="url(#gnome-brim)" stroke="#60409b" stroke-width="4.2"/>
+    <circle cx="94" cy="23" r="4.5" fill="url(#gnome-star)" stroke="#b18217" stroke-width="2.2"/>
+    <path d="M96 34l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z" fill="url(#gnome-star)" stroke="#b18217" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M66 50c-16 0-28 10-28 26 0 18 10 32 26 39 10-2 18-10 23-21-11-5-17-15-17-30 0-4 1-9 2-14z" fill="url(#gnome-beard)" stroke="#9c8563" stroke-width="4.2"/>
+    <path d="M58 81c4 7 8 11 13 12" fill="#fffef8" opacity=".76"/>
+    <ellipse cx="61" cy="59" rx="17" ry="14" fill="url(#gnome-skin)" stroke="#7c6050" stroke-width="4.2"/>
+    <ellipse cx="46" cy="63" rx="6.8" ry="5.2" fill="#e5a08b" stroke="#7c6050" stroke-width="2.6"/>
+    <ellipse cx="56" cy="70" rx="4.2" ry="2.2" fill="#f4a5b0" opacity=".38"/>
+    
+    
+          <path d="M47 59c3-3 6-3 9 0" fill="none" stroke="#1d2639" stroke-width="3.2" stroke-linecap="round"/>
+        
+    <path d="M39 72c4 5 9 6 14 2" fill="none" stroke="#6f4e3f" stroke-width="3" stroke-linecap="round"/>
+  
+    <path d="M82 88l5 6-5 7-5-7z" fill="url(#gnome-star)" stroke="#b18217" stroke-width="2.2" stroke-linejoin="round"/>
+  
+</svg>
