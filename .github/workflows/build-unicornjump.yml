@@ -120,6 +120,20 @@ jobs:
           name: unicornjump-build-${{ github.sha }}
           path: build-metadata.json
 
+      - name: Trigger Fortress Deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          FORTRESS_WORKFLOW_TOKEN: ${{ secrets.FORTRESS_WORKFLOW_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${FORTRESS_WORKFLOW_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/benlagrone/fortress-phronesis/actions/workflows/deploy-unicornjump.yml/dispatches \
+            -d "{\"ref\":\"main\",\"inputs\":{\"source_sha\":\"${GITHUB_SHA}\",\"environment\":\"prod\"}}"
+
       - name: Build Summary
         shell: bash
         run: |
@@ -140,5 +154,9 @@ jobs:
             if [ -n "$DIGEST" ]; then
               echo "- Image digest: \`${DIGEST}\`"
             fi
-            echo "- Deploy next: run \`Deploy Unicornjump\` in fortress-phronesis with source SHA \`${GITHUB_SHA}\`."
+            if [ "${GITHUB_EVENT_NAME}" = "push" ] && [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+              echo "- Deploy: fortress deployment was dispatched automatically for this SHA."
+            else
+              echo "- Deploy: automatic deployment is only triggered for pushes to \`main\`."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
