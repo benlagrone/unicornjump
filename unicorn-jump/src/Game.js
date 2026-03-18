@@ -35,9 +35,11 @@ import {
 import {
   getCompanionSpriteAsset,
   getCreatureSpriteAsset,
+  getLandingVillageSpriteAsset,
   getObstacleSpriteAsset,
   getQuestItemSpriteAsset,
   getRescueLeafSpriteAsset,
+  getWorldLandmarkSpriteAsset,
 } from './spriteCatalog';
 import useGameAudio from './useGameAudio';
 
@@ -494,6 +496,16 @@ const buildPlatformMotion = (
 
 const syncPlatformPositions = (platforms, timeMs) => {
   platforms.forEach((platform) => {
+    if (platform.frozenUntil && platform.frozenUntil > timeMs) {
+      platform.x = platform.frozenX ?? platform.x;
+      return;
+    }
+
+    if (platform.frozenUntil && platform.frozenUntil <= timeMs) {
+      platform.frozenUntil = null;
+      platform.frozenX = null;
+    }
+
     if (!platform.moving || platform.moveAmplitude <= 0 || platform.moveFrequency <= 0) {
       platform.x = platform.baseX ?? platform.x;
       return;
@@ -660,6 +672,27 @@ const getVillagePromptText = (village) =>
   village?.rewardGranted
     ? village.reward?.activePrompt ?? 'Glow is awake'
     : village?.reward?.prompt ?? 'Tap to visit';
+const getVillageBlessing = (gameState) => {
+  const reward = gameState.worldScene?.village?.reward;
+  if (!gameState.worldScene?.village?.rewardGranted || !reward) {
+    return null;
+  }
+
+  return {
+    type: reward.mechanicType ?? reward.reactionType,
+    label: reward.mechanicLabel ?? reward.label,
+    hint: reward.mechanicHint ?? '',
+  };
+};
+const getFrozenPlatformCount = (gameState) =>
+  gameState.platforms.filter((platform) => platform.frozenUntil > gameState.timeMs).length;
+const setBlessingBurst = (gameState, type, platformId = null, durationMs = 480) => {
+  gameState.blessingBurst = {
+    type,
+    platformId,
+    until: gameState.timeMs + durationMs,
+  };
+};
 
 const createSkyObstacle = (gameState, runtimeConfig) => {
   const fromLeft = Math.random() < 0.5;
@@ -735,6 +768,7 @@ const createSnapshot = (gameState) => ({
   obstacles: gameState.obstacles.map((obstacle) => ({ ...obstacle })),
   companions: gameState.companions.map((companion) => ({ ...companion })),
   rescueLeaf: gameState.rescueLeaf ? { ...gameState.rescueLeaf } : null,
+  blessingBurst: gameState.blessingBurst ? { ...gameState.blessingBurst } : null,
   dialog: cloneDialog(gameState.dialog),
   scene: {
     far: gameState.scene.far.map((entry) => ({ ...entry })),
@@ -874,6 +908,7 @@ const buildInitialState = (runtimeConfig) => {
     clearedObstacleBadges: [],
     companions: [...runtimeConfig.companions],
     rescueLeaf: null,
+    blessingBurst: null,
     dialog: null,
     lastDialogAt: -DIALOG_GAP_MS,
     scene,
@@ -961,6 +996,29 @@ const visitLandingVillage = (gameState, runtimeConfig, callbacks) => {
   );
 
   return firstVisit;
+};
+
+const applyVillageBlessingToLanding = (gameState, platform, villageBlessing) => {
+  if (!platform || !villageBlessing || platform.isGoal || platform.isRescueLeaf) {
+    return;
+  }
+
+  if (villageBlessing.type === 'stone-steady' && platform.moving) {
+    platform.frozenX = platform.x;
+    platform.frozenUntil = gameState.timeMs + 2200;
+    setBlessingBurst(gameState, villageBlessing.type, platform.id, 560);
+    return;
+  }
+
+  if (villageBlessing.type === 'wind-lift') {
+    gameState.player.vy = Math.round(gameState.metrics.jumpVelocity * 1.08);
+    setBlessingBurst(gameState, villageBlessing.type, platform.id, 520);
+    return;
+  }
+
+  if (villageBlessing.type === 'leaf-bloom') {
+    setBlessingBurst(gameState, villageBlessing.type, platform.id, 560);
+  }
 };
 
 const enterClimbScene = (gameState, callbacks) => {
@@ -1136,6 +1194,10 @@ const updateGameState = (
     gameState.dialog = null;
   }
 
+  if (gameState.blessingBurst && gameState.timeMs >= gameState.blessingBurst.until) {
+    gameState.blessingBurst = null;
+  }
+
   syncPlatformPositions(gameState.platforms, gameState.timeMs);
   syncAnchoredEntities(gameState);
 
@@ -1161,6 +1223,7 @@ const updateGameState = (
 
   const deltaSeconds = deltaMs / 1000;
   const { player, platforms, viewport } = gameState;
+  const villageBlessing = getVillageBlessing(gameState);
 
   gameState.obstacles = gameState.obstacles
     .map((obstacle) => ({
@@ -1198,13 +1261,23 @@ const updateGameState = (
     0,
     viewport.width - player.width
   );
+  const glideActive =
+    villageBlessing?.type === 'wind-glide' &&
+    player.vy >= 0 &&
+    (inputState.left || inputState.right);
+  const activeGravity = glideActive ? gameState.metrics.gravity * 0.62 : gameState.metrics.gravity;
+  const activeMaxFallSpeed =
+    villageBlessing?.type === 'wind-glide'
+      ? Math.min(runtimeConfig.companionBonuses.maxFallSpeed, 640)
+      : runtimeConfig.companionBonuses.maxFallSpeed;
   player.vy = Math.min(
-    player.vy + gameState.metrics.gravity * deltaSeconds,
-    runtimeConfig.companionBonuses.maxFallSpeed
+    player.vy + activeGravity * deltaSeconds,
+    activeMaxFallSpeed
   );
   player.y += player.vy * deltaSeconds;
 
   let landingPlatform = null;
+  const platformCollisionPadding = villageBlessing?.type === 'leaf-bloom' ? 18 : 0;
   const collisionPlatforms = gameState.rescueLeaf
     ? gameState.rescueLeaf.used
       ? platforms
@@ -1215,8 +1288,8 @@ const updateGameState = (
     for (const platform of collisionPlatforms) {
       const currentBottom = player.y + player.height;
       const overlapsHorizontally =
-        player.x + player.width - 18 > platform.x &&
-        player.x + 18 < platform.x + platform.width;
+        player.x + player.width - 18 > platform.x - platformCollisionPadding &&
+        player.x + 18 < platform.x + platform.width + platformCollisionPadding;
       const crossedPlatformTop =
         previousBottom <= platform.y + platform.height / 2 &&
         currentBottom >= platform.y &&
@@ -1371,6 +1444,7 @@ const updateGameState = (
 
   player.animation = landingPlatform ? 'jump' : getAnimationForPlayer(player);
   if (landingPlatform && !landingPlatform.isGoal && !landingPlatform.isRescueLeaf) {
+    applyVillageBlessingToLanding(gameState, landingPlatform, villageBlessing);
     if (callbacks.onAudioEvent) {
       callbacks.onAudioEvent('jump');
     }
@@ -3276,6 +3350,13 @@ const Game = ({
       const state = renderedStateRef.current;
       const companionBonuses = getCompanionBonuses(state.companions);
       const guideLightsVisible = companionBonuses.revealGuides;
+      const villageBlessing = getVillageBlessing(state);
+      const mirrorGuideActive = villageBlessing?.type === 'mirror-guide';
+      const routeGuidesVisible = guideLightsVisible || mirrorGuideActive;
+      const glideActive =
+        villageBlessing?.type === 'wind-glide' &&
+        state.player.vy > 0 &&
+        Math.abs(state.player.vx) > 1;
       const villageHarmony = getVillageVisitScore(state);
       const collectibleHarmony =
         state.quest.collected * (12 + companionBonuses.collectibleBonus);
@@ -3389,6 +3470,25 @@ const Game = ({
                 type: state.worldScene.village.reward.reactionType,
               }
             : null,
+        villageBlessing:
+          villageBlessing && state.sceneMode === 'climb'
+            ? {
+                active: true,
+                type: villageBlessing.type,
+                label: villageBlessing.label,
+                hint: villageBlessing.hint,
+                glideActive,
+                frozenPlatforms: getFrozenPlatformCount(state),
+                routeGuidesVisible,
+                platformBloom: villageBlessing.type === 'leaf-bloom',
+                burst: state.blessingBurst
+                  ? {
+                      type: state.blessingBurst.type,
+                      platformId: state.blessingBurst.platformId,
+                    }
+                  : null,
+              }
+            : null,
         landmark:
           state.sceneMode === 'landing' && state.worldScene
             ? {
@@ -3437,9 +3537,10 @@ const Game = ({
             height: platform.height,
             isGoal: platform.isGoal,
             moving: platform.moving,
+            frozen: platform.frozenUntil > state.timeMs,
             moveSpeed: Math.round(platform.moveSpeed || 0),
             travelWidth: Math.round((platform.moveAmplitude || 0) * 2),
-            guide: guideLightsVisible && state.quest.guidePlatformIds.includes(platform.id),
+            guide: routeGuidesVisible && state.quest.guidePlatformIds.includes(platform.id),
           })),
         visibleObstacles: state.obstacles
           .filter((obstacle) => {
@@ -3464,6 +3565,7 @@ const Game = ({
             x: Math.round(item.x),
             y: Math.round(item.y - state.cameraY),
             type: item.type,
+            guided: mirrorGuideActive,
           })),
         rescueLeaf: state.rescueLeaf
           ? {
@@ -3497,7 +3599,16 @@ const Game = ({
   const biome = getBiomeConfig(biomeIndex);
   const landingMode = renderState.sceneMode === 'landing';
   const worldScene = renderState.worldScene;
-  const guideLightsVisible = getCompanionBonuses(renderState.companions).revealGuides;
+  const companionBonuses = getCompanionBonuses(renderState.companions);
+  const guideLightsVisible = companionBonuses.revealGuides;
+  const activeVillageBlessing = getVillageBlessing(renderState);
+  const mirrorGuideActive = activeVillageBlessing?.type === 'mirror-guide';
+  const routeGuidesVisible = guideLightsVisible || mirrorGuideActive;
+  const glideActive =
+    activeVillageBlessing?.type === 'wind-glide' &&
+    renderState.player.vy > 0 &&
+    Math.abs(renderState.player.vx) > 1;
+  const leafBloomActive = activeVillageBlessing?.type === 'leaf-bloom';
   const dialogStyle = renderState.dialog
     ? getDialogStyle(renderState.dialog.tone, biome.palette)
     : null;
@@ -3564,6 +3675,12 @@ const Game = ({
     rescueLeaf: renderState.rescueLeaf,
     timeMs: renderState.timeMs,
   });
+  const landingVillageSpriteSrc = getLandingVillageSpriteAsset({
+    village: worldScene?.village,
+  });
+  const worldLandmarkSpriteSrc = getWorldLandmarkSpriteAsset({
+    biomeId: biome.id,
+  });
   const landingGroundTheme = getLandingGroundTheme(biome.id);
   const landingGroundImage = pickPlatformImage(biomeIndex * 2 + 1);
   const landingGroundVisualHeight = worldScene
@@ -3605,6 +3722,8 @@ const Game = ({
     villageRewardActive && worldScene?.village?.reward
       ? `${worldScene.village.reward.label} +${worldScene.village.reward.points}`
       : null;
+  const villageBlessingHintText =
+    villageRewardActive && activeVillageBlessing?.hint ? activeVillageBlessing.hint : null;
   const compactControlsVisible =
     compactHud &&
     !renderState.dialog &&
@@ -4050,6 +4169,25 @@ const Game = ({
                 {villageRewardChipText}
               </div>
             )}
+
+            {villageBlessingHintText && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: compactHud ? 12 : 18,
+                  top: compactHud ? 64 : 78,
+                  padding: compactHud ? '4px 8px' : '5px 10px',
+                  borderRadius: 999,
+                  background: 'rgba(255, 255, 255, 0.74)',
+                  color: biome.palette.heading,
+                  fontSize: compactHud ? 10 : 11,
+                  fontWeight: 600,
+                  boxShadow: '0 8px 16px rgba(15, 23, 42, 0.1)',
+                }}
+              >
+                {villageBlessingHintText}
+              </div>
+            )}
           </div>
 
           {worldScene.village && (
@@ -4064,7 +4202,38 @@ const Game = ({
                 filter: 'drop-shadow(0 10px 18px rgba(15, 23, 42, 0.14))',
               }}
             >
-              {renderLandingVillageSprite(worldScene.village, biome.palette)}
+              {landingVillageSpriteSrc ? (
+                <>
+                  {worldScene.village.rewardGranted && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '12%',
+                        right: '12%',
+                        top: '12%',
+                        bottom: '10%',
+                        borderRadius: '50%',
+                        background: biome.palette.accentSoft,
+                        opacity: 0.42,
+                        filter: 'blur(16px)',
+                      }}
+                    />
+                  )}
+                  <img
+                    src={landingVillageSpriteSrc}
+                    alt=""
+                    draggable={false}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                </>
+              ) : (
+                renderLandingVillageSprite(worldScene.village, biome.palette)
+              )}
             </div>
           )}
 
@@ -4086,7 +4255,21 @@ const Game = ({
               filter: 'drop-shadow(0 10px 18px rgba(15, 23, 42, 0.16))',
             }}
           >
-            {renderWorldLandmarkSprite(biome.id, biome.palette)}
+            {worldLandmarkSpriteSrc ? (
+              <img
+                src={worldLandmarkSpriteSrc}
+                alt=""
+                draggable={false}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  pointerEvents: 'none',
+                }}
+              />
+            ) : (
+              renderWorldLandmarkSprite(biome.id, biome.palette)
+            )}
           </div>
 
           <div
@@ -4642,7 +4825,10 @@ const Game = ({
         }
 
         const isGuidePlatform =
-          renderState.quest.guidePlatformIds.includes(platform.id) && guideLightsVisible;
+          renderState.quest.guidePlatformIds.includes(platform.id) && routeGuidesVisible;
+        const platformFrozen = platform.frozenUntil > renderState.timeMs;
+        const platformBloomed = leafBloomActive && !platform.isGoal;
+        const blessingBurstActive = renderState.blessingBurst?.platformId === platform.id;
 
         return (
           <div
@@ -4661,11 +4847,57 @@ const Game = ({
                 ? renderState.quest.completed
                   ? `drop-shadow(0 0 18px ${biome.palette.platformGlow})`
                   : 'drop-shadow(0 10px 18px rgba(23, 37, 84, 0.18)) grayscale(0.15)'
-                : 'drop-shadow(0 12px 18px rgba(23, 37, 84, 0.18))',
+                : platformFrozen
+                  ? 'drop-shadow(0 0 12px rgba(255,255,255,0.3)) drop-shadow(0 12px 18px rgba(23, 37, 84, 0.18))'
+                  : 'drop-shadow(0 12px 18px rgba(23, 37, 84, 0.18))',
               zIndex: platform.isGoal ? 12 : 7,
               opacity: platform.isGoal || !isGuidePlatform ? 1 : 0.92,
             }}
           >
+            {platformBloomed && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: -16,
+                  right: -16,
+                  top: -8,
+                  bottom: -6,
+                  borderRadius: 999,
+                  background: `linear-gradient(90deg, rgba(0,0,0,0), ${biome.palette.leaf}, rgba(255,255,255,0.72), ${biome.palette.leaf}, rgba(0,0,0,0))`,
+                  opacity: 0.26,
+                  filter: 'blur(8px)',
+                }}
+              />
+            )}
+            {platformFrozen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '14%',
+                  right: '14%',
+                  top: 4,
+                  height: 8,
+                  borderRadius: 999,
+                  background: 'rgba(232, 239, 242, 0.84)',
+                  boxShadow: '0 0 10px rgba(255,255,255,0.18)',
+                }}
+              />
+            )}
+            {blessingBurstActive && renderState.blessingBurst?.type === 'wind-lift' && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  bottom: '100%',
+                  width: 52,
+                  height: 52,
+                  transform: 'translateX(-50%)',
+                  borderRadius: '50%',
+                  border: `3px solid ${biome.palette.accentSoft}`,
+                  opacity: 0.7,
+                }}
+              />
+            )}
             {isGuidePlatform && !platform.isGoal && (
               <div
                 style={{
@@ -4774,21 +5006,35 @@ const Game = ({
               borderRadius: questItemSpriteSrc ? 0 : '999px',
               background: questItemSpriteSrc
                 ? 'transparent'
-                : renderState.quest.started
+                : renderState.quest.started || mirrorGuideActive
                   ? biome.palette.questItemSoft
                   : 'rgba(255,255,255,0.28)',
               boxShadow: questItemSpriteSrc
                 ? 'none'
-                : renderState.quest.started
+                : renderState.quest.started || mirrorGuideActive
                   ? `0 0 20px ${biome.palette.questItem}`
                   : '0 0 8px rgba(255,255,255,0.24)',
               filter: questItemSpriteSrc
-                ? `drop-shadow(0 8px 16px ${biome.palette.questItemSoft})`
+                ? `drop-shadow(0 8px 16px ${mirrorGuideActive ? biome.palette.questItem : biome.palette.questItemSoft})`
                 : 'none',
-              opacity: renderState.quest.started ? 1 : 0.5,
+              opacity: renderState.quest.started || mirrorGuideActive ? 1 : 0.5,
               zIndex: 16,
             }}
           >
+            {mirrorGuideActive && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  bottom: '100%',
+                  width: 10,
+                  height: 30,
+                  transform: 'translateX(-50%)',
+                  background: `linear-gradient(180deg, rgba(255,255,255,0), ${biome.palette.questItemSoft})`,
+                  opacity: 0.68,
+                }}
+              />
+            )}
             {questItemSpriteSrc ? (
               <img
                 src={questItemSpriteSrc}
@@ -5078,6 +5324,73 @@ const Game = ({
         width={renderState.player.width}
         height={renderState.player.height}
       />
+
+      {glideActive && (
+        <div
+          style={{
+            position: 'absolute',
+            left: renderState.player.x - renderState.player.width * 0.32,
+            top: renderState.player.y - renderState.cameraY + renderState.player.height * 0.2,
+            width: renderState.player.width * 0.64,
+            height: renderState.player.height * 0.34,
+            pointerEvents: 'none',
+            zIndex: 17,
+          }}
+        >
+          {[0, 1, 2].map((index) => (
+            <div
+              key={index}
+              style={{
+                position: 'absolute',
+                right: `${index * 18}%`,
+                top: `${index * 18}%`,
+                width: `${44 - index * 8}%`,
+                height: 5,
+                borderRadius: 999,
+                background: biome.palette.accentSoft,
+                opacity: 0.72 - index * 0.16,
+                transform: `rotate(${-16 + index * 4}deg)`,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {!landingMode && activeVillageBlessing && (
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: compactHud ? 'max(56px, env(safe-area-inset-top) + 44px)' : 'max(72px, env(safe-area-inset-top) + 52px)',
+            transform: 'translateX(-50%)',
+            zIndex: 29,
+            padding: compactHud ? '7px 10px' : '9px 12px',
+            borderRadius: 18,
+            background: 'rgba(255, 252, 245, 0.92)',
+            border: `1px solid ${biome.palette.panelBorder}`,
+            boxShadow: '0 14px 28px rgba(15, 23, 42, 0.16)',
+            color: biome.palette.heading,
+            textAlign: 'center',
+            minWidth: compactHud ? 132 : 160,
+          }}
+        >
+          <div
+            style={{
+              fontSize: compactHud ? 10 : 11,
+              fontWeight: 800,
+              letterSpacing: 1,
+              textTransform: 'uppercase',
+              opacity: 0.68,
+              marginBottom: 2,
+            }}
+          >
+            {activeVillageBlessing.label}
+          </div>
+          <div style={{ fontSize: compactHud ? 11 : 12, fontWeight: 600 }}>
+            {activeVillageBlessing.hint}
+          </div>
+        </div>
+      )}
 
       {renderState.dialog && (
         <div
