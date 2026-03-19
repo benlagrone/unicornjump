@@ -275,19 +275,112 @@ const bluebonnetPatchSvg = wrapSvg(
   `
 );
 
+const skyLanternGateSvg = wrapSvg(
+  bambooDefs,
+  `
+  <ellipse cx="48" cy="89" rx="24" ry="5" fill="#5a4a3d" opacity=".14"/>
+  <path d="M24 82V48c0-20 9-32 24-32s24 12 24 32v34" fill="none" stroke="url(#bamboo-wood)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M24 48c8-7 16-10 24-10 8 0 16 3 24 10" fill="none" stroke="#7d5a3f" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M18 82h60" fill="none" stroke="#6b4a31" stroke-width="6" stroke-linecap="round"/>
+  <path d="M31 25c5-7 9-10 15-12M50 13c8 2 13 6 16 12" fill="none" stroke="#8ab86d" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="48" cy="38" r="18" fill="url(#bamboo-glow)" opacity=".58"/>
+  <path d="M41 28h14v18c0 4.4-3 7-7 7s-7-2.6-7-7z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M26 37h10v14c0 3.8-2.2 5.8-5 5.8s-5-2-5-5.8z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M60 37h10v14c0 3.8-2.2 5.8-5 5.8s-5-2-5-5.8z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M31 29v8M65 29v8M48 21v7" fill="none" stroke="#6e4d34" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M19 60c6-4 10-4 16 0M61 60c6-4 10-4 16 0" fill="none" stroke="#91bc74" stroke-width="3.4" stroke-linecap="round" opacity=".82"/>
+  `
+);
+
+const breezeArchSvg = wrapSvg(
+  meadowDefs,
+  `
+  <ellipse cx="48" cy="89" rx="24" ry="5" fill="#5d6b58" opacity=".14"/>
+  <path d="M24 82V52c0-18 10-30 24-30s24 12 24 30v30" fill="none" stroke="url(#meadow-stone)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M24 52c7-7 15-10 24-10 9 0 17 3 24 10" fill="none" stroke="#8d9b95" stroke-width="4.6" stroke-linecap="round"/>
+  <path d="M18 82h60" fill="none" stroke="#87968f" stroke-width="6" stroke-linecap="round"/>
+  <path d="M24 40c7-8 14-11 24-11 10 0 17 3 24 11" fill="none" stroke="#7fc28e" stroke-width="4" stroke-linecap="round" opacity=".78"/>
+  <path d="M34 22c-8 0-14 4.5-14 11 0 6.2 5.6 10.6 14 10.6 7.2 0 12.8-2.5 16.8-7-2.1-8.2-8.1-14.6-16.8-14.6z" fill="url(#meadow-wool)" stroke="#d2ddd5" stroke-width="2.8"/>
+  <path d="M62 22c8.4 0 14 5.1 14 12 0 6-5.3 10-13.2 10-7.1 0-12.7-2.6-16.9-7.3 2.4-8.2 8.2-14.7 16.1-14.7z" fill="url(#meadow-wool)" stroke="#d2ddd5" stroke-width="2.8"/>
+  <circle cx="37" cy="52" r="3.4" fill="#e7b4ff" stroke="#b47cd9" stroke-width="1.8"/>
+  <circle cx="48" cy="45" r="3.4" fill="#f8f4ff" stroke="#b47cd9" stroke-width="1.8"/>
+  <circle cx="59" cy="52" r="3.4" fill="#e7b4ff" stroke="#b47cd9" stroke-width="1.8"/>
+  <path d="M27 63c5-4 10-4 15 0M54 63c5-4 10-4 15 0" fill="none" stroke="#eef7ef" stroke-width="2.6" stroke-linecap="round" opacity=".82"/>
+  `
+);
+
+const pageArchSvg = wrapSvg(
+  storyDefs,
+  `
+  <ellipse cx="48" cy="89" rx="24" ry="5" fill="#6d5149" opacity=".14"/>
+  <path d="M24 82V52c0-18 10-30 24-30s24 12 24 30v30" fill="none" stroke="#b68b6d" stroke-width="8" stroke-linecap="round"/>
+  <path d="M24 52c7-7 15-10 24-10 9 0 17 3 24 10" fill="none" stroke="#8e664f" stroke-width="4.6" stroke-linecap="round"/>
+  <path d="M18 82h60" fill="none" stroke="#815f48" stroke-width="6" stroke-linecap="round"/>
+  <path d="M28 23c6-5 12-7 20-7s14 2 20 7" fill="none" stroke="#f4eadb" stroke-width="6" stroke-linecap="round"/>
+  <path d="M32 18c4 4 10 6 16 6s12-2 16-6" fill="none" stroke="#d9b46d" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M30 23c0 10 8 18 18 18s18-8 18-18" fill="none" stroke="#f4eadb" stroke-width="4.2" stroke-linecap="round"/>
+  <circle cx="31" cy="44" r="4.6" fill="url(#story-window)" opacity=".82"/>
+  <circle cx="65" cy="44" r="4.6" fill="url(#story-window)" opacity=".82"/>
+  <path d="M40 33l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" fill="#ffe59a" stroke="#e0b454" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M56 33l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff1be" stroke="#e0b454" stroke-width="1.5" stroke-linejoin="round"/>
+  `
+);
+
+const goldenArborGateSvg = wrapSvg(
+  orchardDefs,
+  `
+  <ellipse cx="48" cy="89" rx="24" ry="5" fill="#72523b" opacity=".14"/>
+  <path d="M24 82V50c0-19 10-31 24-31s24 12 24 31v32" fill="none" stroke="url(#orchard-wood)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M24 50c8-7 16-10 24-10 8 0 16 3 24 10" fill="none" stroke="#8d582c" stroke-width="4.6" stroke-linecap="round"/>
+  <path d="M18 82h60" fill="none" stroke="#8f5e31" stroke-width="6" stroke-linecap="round"/>
+  <path d="M27 37c4-9 10-14 21-17M48 20c11 3 17 8 21 17" fill="none" stroke="url(#orchard-leaf)" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="35" cy="30" r="5.2" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="2.2"/>
+  <circle cx="48" cy="24" r="5.6" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="2.2"/>
+  <circle cx="61" cy="30" r="5.2" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="2.2"/>
+  <ellipse cx="48" cy="46" rx="8" ry="11" fill="url(#orchard-glass)" stroke="#f7b34a" stroke-width="3"/>
+  <path d="M44 43c3-5 6-7 10-6" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" opacity=".62"/>
+  <path d="M28 61c6 5 12 5 18 0M50 61c6 5 12 5 18 0" fill="none" stroke="#f4dfad" stroke-width="2.8" stroke-linecap="round" opacity=".78"/>
+  `
+);
+
+const windmillGateSvg = wrapSvg(
+  prairieDefs,
+  `
+  <ellipse cx="48" cy="89" rx="24" ry="5" fill="#5876a3" opacity=".14"/>
+  <path d="M24 82V52c0-18 10-30 24-30s24 12 24 30v30" fill="none" stroke="url(#prairie-post)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M24 52c7-7 15-10 24-10 9 0 17 3 24 10" fill="none" stroke="#90a4c4" stroke-width="4.6" stroke-linecap="round"/>
+  <path d="M18 82h60" fill="none" stroke="#98acd2" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="48" cy="31" r="8.6" fill="#f6fbff" stroke="#8ea2c2" stroke-width="2.8"/>
+  <path d="M48 16v13M48 33v13M33 31h13M50 31h13" fill="none" stroke="#dce9ff" stroke-width="4" stroke-linecap="round"/>
+  <path d="M37 20l9 9M59 20l-9 9M37 42l9-9M59 42l-9-9" fill="none" stroke="#dce9ff" stroke-width="4" stroke-linecap="round"/>
+  <g transform="translate(0 3)">
+    <path d="M28 58c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="2"/>
+    <path d="M44 63c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="2"/>
+    <path d="M58 58c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="2"/>
+  </g>
+  <circle cx="31" cy="47" r="8.5" fill="url(#prairie-firefly)" opacity=".72"/>
+  <circle cx="65" cy="41" r="8.5" fill="url(#prairie-firefly)" opacity=".72"/>
+  `
+);
+
 const entries = [
   ['world/lantern-bamboo-valley/props', 'tea-table.svg', teaTableSvg],
   ['world/lantern-bamboo-valley/landmark', 'lantern-stand.svg', lanternStandSvg],
+  ['world/lantern-bamboo-valley/gate', 'sky-lantern-gate.svg', skyLanternGateSvg],
   ['world/highland-meadow/props', 'wool-cart.svg', woolCartSvg],
   ['world/highland-meadow/landmark', 'stone-circle.svg', stoneCircleSvg],
+  ['world/highland-meadow/gate', 'breeze-arch.svg', breezeArchSvg],
   ['world/storybook-forest/props', 'mushroom-house.svg', mushroomHouseSvg],
   ['world/storybook-forest/landmark', 'story-tree.svg', storyTreeSvg],
+  ['world/storybook-forest/gate', 'page-arch.svg', pageArchSvg],
   ['world/sun-orchard/props', 'mirror-stand.svg', mirrorStandSvg],
   ['world/sun-orchard/landmark', 'citrus-arbor.svg', citrusArborSvg],
+  ['world/sun-orchard/gate', 'golden-arbor.svg', goldenArborGateSvg],
   ['world/bluebonnet-prairie/props', 'windmill-post.svg', windmillPostSvg],
   ['world/bluebonnet-prairie/landmark', 'bluebonnet-patch.svg', bluebonnetPatchSvg],
+  ['world/bluebonnet-prairie/gate', 'windmill-gate.svg', windmillGateSvg],
 ];
 
 entries.forEach(([folder, filename, svg]) => writeSprite(folder, filename, svg));
 
-console.log('Generated world scene prop and landmark sprites.');
+console.log('Generated world scene prop, landmark, and gate sprites.');

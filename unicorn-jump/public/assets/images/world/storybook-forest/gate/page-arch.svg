@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  
+<defs>
+  <linearGradient id="story-bark" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#9d734d"/>
+    <stop offset="1" stop-color="#6d4f39"/>
+  </linearGradient>
+  <linearGradient id="story-leaves" x1=".18" y1=".08" x2=".84" y2=".92">
+    <stop offset="0" stop-color="#dff4bb"/>
+    <stop offset=".48" stop-color="#8dcf7e"/>
+    <stop offset="1" stop-color="#4d9a68"/>
+  </linearGradient>
+  <linearGradient id="story-cap" x1=".28" y1=".06" x2=".8" y2=".92">
+    <stop offset="0" stop-color="#ffcfb0"/>
+    <stop offset=".55" stop-color="#ef8b6d"/>
+    <stop offset="1" stop-color="#d76a59"/>
+  </linearGradient>
+  <radialGradient id="story-window" cx=".5" cy=".5" r=".62">
+    <stop offset="0" stop-color="#fff8d3"/>
+    <stop offset="1" stop-color="#ffc864"/>
+  </radialGradient>
+</defs>
+
+  
+  <ellipse cx="48" cy="89" rx="24" ry="5" fill="#6d5149" opacity=".14"/>
+  <path d="M24 82V52c0-18 10-30 24-30s24 12 24 30v30" fill="none" stroke="#b68b6d" stroke-width="8" stroke-linecap="round"/>
+  <path d="M24 52c7-7 15-10 24-10 9 0 17 3 24 10" fill="none" stroke="#8e664f" stroke-width="4.6" stroke-linecap="round"/>
+  <path d="M18 82h60" fill="none" stroke="#815f48" stroke-width="6" stroke-linecap="round"/>
+  <path d="M28 23c6-5 12-7 20-7s14 2 20 7" fill="none" stroke="#f4eadb" stroke-width="6" stroke-linecap="round"/>
+  <path d="M32 18c4 4 10 6 16 6s12-2 16-6" fill="none" stroke="#d9b46d" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M30 23c0 10 8 18 18 18s18-8 18-18" fill="none" stroke="#f4eadb" stroke-width="4.2" stroke-linecap="round"/>
+  <circle cx="31" cy="44" r="4.6" fill="url(#story-window)" opacity=".82"/>
+  <circle cx="65" cy="44" r="4.6" fill="url(#story-window)" opacity=".82"/>
+  <path d="M40 33l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" fill="#ffe59a" stroke="#e0b454" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M56 33l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff1be" stroke="#e0b454" stroke-width="1.5" stroke-linejoin="round"/>
+  
+</svg>

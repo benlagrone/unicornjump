@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  
+<defs>
+  <linearGradient id="prairie-post" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#f4f7ff"/>
+    <stop offset="1" stop-color="#b9cce8"/>
+  </linearGradient>
+  <linearGradient id="prairie-leaf" x1=".3" y1=".1" x2=".78" y2=".94">
+    <stop offset="0" stop-color="#d6f6be"/>
+    <stop offset=".5" stop-color="#85c86d"/>
+    <stop offset="1" stop-color="#4a9758"/>
+  </linearGradient>
+  <radialGradient id="prairie-petal" cx=".45" cy=".32" r=".72">
+    <stop offset="0" stop-color="#f8fbff"/>
+    <stop offset=".46" stop-color="#8fb8ff"/>
+    <stop offset="1" stop-color="#4966db"/>
+  </radialGradient>
+  <radialGradient id="prairie-firefly" cx=".5" cy=".45" r=".62">
+    <stop offset="0" stop-color="#fff8d8"/>
+    <stop offset=".6" stop-color="#bce9ff" stop-opacity=".74"/>
+    <stop offset="1" stop-color="#bce9ff" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+
+  
+  <ellipse cx="48" cy="89" rx="24" ry="5" fill="#5876a3" opacity=".14"/>
+  <path d="M24 82V52c0-18 10-30 24-30s24 12 24 30v30" fill="none" stroke="url(#prairie-post)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M24 52c7-7 15-10 24-10 9 0 17 3 24 10" fill="none" stroke="#90a4c4" stroke-width="4.6" stroke-linecap="round"/>
+  <path d="M18 82h60" fill="none" stroke="#98acd2" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="48" cy="31" r="8.6" fill="#f6fbff" stroke="#8ea2c2" stroke-width="2.8"/>
+  <path d="M48 16v13M48 33v13M33 31h13M50 31h13" fill="none" stroke="#dce9ff" stroke-width="4" stroke-linecap="round"/>
+  <path d="M37 20l9 9M59 20l-9 9M37 42l9-9M59 42l-9-9" fill="none" stroke="#dce9ff" stroke-width="4" stroke-linecap="round"/>
+  <g transform="translate(0 3)">
+    <path d="M28 58c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="2"/>
+    <path d="M44 63c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="2"/>
+    <path d="M58 58c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="2"/>
+  </g>
+  <circle cx="31" cy="47" r="8.5" fill="url(#prairie-firefly)" opacity=".72"/>
+  <circle cx="65" cy="41" r="8.5" fill="url(#prairie-firefly)" opacity=".72"/>
+  
+</svg>

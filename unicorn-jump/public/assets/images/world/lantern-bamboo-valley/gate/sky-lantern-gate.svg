@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  
+<defs>
+  <linearGradient id="bamboo-wood" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#a77a56"/>
+    <stop offset="1" stop-color="#6f4c33"/>
+  </linearGradient>
+  <linearGradient id="bamboo-lantern" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#fff7d1"/>
+    <stop offset=".55" stop-color="#ffd67a"/>
+    <stop offset="1" stop-color="#f29f38"/>
+  </linearGradient>
+  <radialGradient id="bamboo-glow" cx=".5" cy=".46" r=".62">
+    <stop offset="0" stop-color="#fff8da"/>
+    <stop offset=".58" stop-color="#ffd27c" stop-opacity=".72"/>
+    <stop offset="1" stop-color="#ffd27c" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+
+  
+  <ellipse cx="48" cy="89" rx="24" ry="5" fill="#5a4a3d" opacity=".14"/>
+  <path d="M24 82V48c0-20 9-32 24-32s24 12 24 32v34" fill="none" stroke="url(#bamboo-wood)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M24 48c8-7 16-10 24-10 8 0 16 3 24 10" fill="none" stroke="#7d5a3f" stroke-width="4.5" stroke-linecap="round"/>
+  <path d="M18 82h60" fill="none" stroke="#6b4a31" stroke-width="6" stroke-linecap="round"/>
+  <path d="M31 25c5-7 9-10 15-12M50 13c8 2 13 6 16 12" fill="none" stroke="#8ab86d" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="48" cy="38" r="18" fill="url(#bamboo-glow)" opacity=".58"/>
+  <path d="M41 28h14v18c0 4.4-3 7-7 7s-7-2.6-7-7z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M26 37h10v14c0 3.8-2.2 5.8-5 5.8s-5-2-5-5.8z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M60 37h10v14c0 3.8-2.2 5.8-5 5.8s-5-2-5-5.8z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M31 29v8M65 29v8M48 21v7" fill="none" stroke="#6e4d34" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M19 60c6-4 10-4 16 0M61 60c6-4 10-4 16 0" fill="none" stroke="#91bc74" stroke-width="3.4" stroke-linecap="round" opacity=".82"/>
+  
+</svg>

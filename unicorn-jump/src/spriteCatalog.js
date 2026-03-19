@@ -232,6 +232,14 @@ const worldLandmarkSpritesByBiome = {
   'bluebonnet-prairie': asset('world/bluebonnet-prairie/landmark/bluebonnet-patch.svg'),
 };
 
+const worldGateSpritesByBiome = {
+  'lantern-bamboo-valley': asset('world/lantern-bamboo-valley/gate/sky-lantern-gate.svg'),
+  'highland-meadow': asset('world/highland-meadow/gate/breeze-arch.svg'),
+  'storybook-forest': asset('world/storybook-forest/gate/page-arch.svg'),
+  'sun-orchard': asset('world/sun-orchard/gate/golden-arbor.svg'),
+  'bluebonnet-prairie': asset('world/bluebonnet-prairie/gate/windmill-gate.svg'),
+};
+
 const obstacleSpritesByBiome = {
   'lantern-bamboo-valley': [asset('obstacle/lantern-fox-ember.svg')],
   'highland-meadow': [asset('obstacle/meadow-sheep-cloud.svg')],
@@ -371,6 +379,8 @@ export const getLandingVillageSpriteAsset = ({ village }) => {
 
 export const getWorldLandmarkSpriteAsset = ({ biomeId }) =>
   worldLandmarkSpritesByBiome[biomeId] || null;
+
+export const getWorldGateSpriteAsset = ({ biomeId }) => worldGateSpritesByBiome[biomeId] || null;
 
 export const getObstacleSpriteAsset = ({ biomeId }) => {
   const candidates = obstacleSpritesByBiome[biomeId];

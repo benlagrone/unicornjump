@@ -35,6 +35,7 @@ import {
 import {
   getCompanionSpriteAsset,
   getCreatureSpriteAsset,
+  getWorldGateSpriteAsset,
   getLandingVillageSpriteAsset,
   getObstacleSpriteAsset,
   getQuestItemSpriteAsset,
@@ -2474,10 +2475,10 @@ const renderWorldLandmarkSprite = (biomeId, palette) => {
             top: '22%',
             width: '64%',
             height: '54%',
-            border: '7px solid rgba(178, 109, 60, 0.92)',
-            borderBottomWidth: 4,
+            borderStyle: 'solid',
+            borderWidth: '7px 7px 4px',
+            borderColor: 'rgba(178, 109, 60, 0.92) rgba(178, 109, 60, 0.92) transparent',
             borderRadius: '999px 999px 24px 24px',
-            borderBottomColor: 'transparent',
           }}
         />
         <div
@@ -3681,6 +3682,9 @@ const Game = ({
   const worldLandmarkSpriteSrc = getWorldLandmarkSpriteAsset({
     biomeId: biome.id,
   });
+  const worldGateSpriteSrc = getWorldGateSpriteAsset({
+    biomeId: biome.id,
+  });
   const landingGroundTheme = getLandingGroundTheme(biome.id);
   const landingGroundImage = pickPlatformImage(biomeIndex * 2 + 1);
   const landingGroundVisualHeight = worldScene
@@ -3724,6 +3728,10 @@ const Game = ({
       : null;
   const villageBlessingHintText =
     villageRewardActive && activeVillageBlessing?.hint ? activeVillageBlessing.hint : null;
+  const worldGateActive = renderState.quest.started || canUseWorldGate || villageRewardActive;
+  const worldGateGlowColor = renderState.quest.started
+    ? biome.palette.questItemSoft
+    : biome.palette.accentSoft;
   const compactControlsVisible =
     compactHud &&
     !renderState.dialog &&
@@ -4280,38 +4288,77 @@ const Game = ({
               width: worldScene.gate.width,
               height: worldScene.gate.height,
               zIndex: 14,
-              filter: canUseWorldGate || villageRewardActive
-                ? `drop-shadow(0 0 18px ${biome.palette.accentSoft}) drop-shadow(0 12px 22px rgba(15, 23, 42, 0.18))`
+              filter: worldGateActive
+                ? `drop-shadow(0 0 18px ${worldGateGlowColor}) drop-shadow(0 12px 22px rgba(15, 23, 42, 0.18))`
                 : 'drop-shadow(0 12px 22px rgba(15, 23, 42, 0.18))',
             }}
           >
-            <div
-              style={{
-                position: 'absolute',
-                left: '8%',
-                right: '8%',
-                bottom: 0,
-                height: '12%',
-                borderRadius: 999,
-                background: 'rgba(112, 86, 63, 0.72)',
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                left: '16%',
-                right: '16%',
-                top: '12%',
-                bottom: '10%',
-                border: `8px solid ${renderState.quest.started ? biome.palette.questItemSoft : 'rgba(255,255,255,0.64)'}`,
-                borderBottomWidth: 5,
-                borderRadius: '999px 999px 28px 28px',
-                borderBottomColor: 'transparent',
-                boxShadow: renderState.quest.started
-                  ? `0 0 22px ${biome.palette.questItem}`
-                  : 'none',
-              }}
-            />
+            {worldGateActive && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: '18%',
+                  right: '18%',
+                  top: '18%',
+                  bottom: '20%',
+                  borderRadius: '50%',
+                  background: worldGateGlowColor,
+                  opacity: renderState.quest.started ? 0.48 : 0.3,
+                  filter: 'blur(18px)',
+                }}
+              />
+            )}
+            {worldGateSpriteSrc ? (
+              <img
+                src={worldGateSpriteSrc}
+                alt=""
+                draggable={false}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  pointerEvents: 'none',
+                }}
+              />
+            ) : (
+              <>
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '8%',
+                    right: '8%',
+                    bottom: 0,
+                    height: '12%',
+                    borderRadius: 999,
+                    background: 'rgba(112, 86, 63, 0.72)',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '16%',
+                    right: '16%',
+                    top: '12%',
+                    bottom: '10%',
+                    borderStyle: 'solid',
+                    borderWidth: '8px 8px 5px',
+                    borderColor: `${
+                      renderState.quest.started
+                        ? biome.palette.questItemSoft
+                        : 'rgba(255,255,255,0.64)'
+                    } ${
+                      renderState.quest.started
+                        ? biome.palette.questItemSoft
+                        : 'rgba(255,255,255,0.64)'
+                    } transparent`,
+                    borderRadius: '999px 999px 28px 28px',
+                    boxShadow: renderState.quest.started
+                      ? `0 0 22px ${biome.palette.questItem}`
+                      : 'none',
+                  }}
+                />
+              </>
+            )}
           </div>
 
           {showVillagePrompt && worldScene.village && (

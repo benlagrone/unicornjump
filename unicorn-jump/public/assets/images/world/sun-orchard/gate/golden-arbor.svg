@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  
+<defs>
+  <linearGradient id="orchard-wood" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#b77b48"/>
+    <stop offset="1" stop-color="#825126"/>
+  </linearGradient>
+  <linearGradient id="orchard-leaf" x1=".24" y1=".1" x2=".8" y2=".9">
+    <stop offset="0" stop-color="#e5f7b4"/>
+    <stop offset=".5" stop-color="#96d167"/>
+    <stop offset="1" stop-color="#4f9d49"/>
+  </linearGradient>
+  <radialGradient id="orchard-fruit" cx=".45" cy=".34" r=".72">
+    <stop offset="0" stop-color="#fff0b0"/>
+    <stop offset=".45" stop-color="#ffb54d"/>
+    <stop offset="1" stop-color="#f07721"/>
+  </radialGradient>
+  <radialGradient id="orchard-glass" cx=".4" cy=".3" r=".86">
+    <stop offset="0" stop-color="#f8ffff"/>
+    <stop offset=".6" stop-color="#d5eff7"/>
+    <stop offset="1" stop-color="#8ab9d1"/>
+  </radialGradient>
+</defs>
+
+  
+  <ellipse cx="48" cy="89" rx="24" ry="5" fill="#72523b" opacity=".14"/>
+  <path d="M24 82V50c0-19 10-31 24-31s24 12 24 31v32" fill="none" stroke="url(#orchard-wood)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M24 50c8-7 16-10 24-10 8 0 16 3 24 10" fill="none" stroke="#8d582c" stroke-width="4.6" stroke-linecap="round"/>
+  <path d="M18 82h60" fill="none" stroke="#8f5e31" stroke-width="6" stroke-linecap="round"/>
+  <path d="M27 37c4-9 10-14 21-17M48 20c11 3 17 8 21 17" fill="none" stroke="url(#orchard-leaf)" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="35" cy="30" r="5.2" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="2.2"/>
+  <circle cx="48" cy="24" r="5.6" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="2.2"/>
+  <circle cx="61" cy="30" r="5.2" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="2.2"/>
+  <ellipse cx="48" cy="46" rx="8" ry="11" fill="url(#orchard-glass)" stroke="#f7b34a" stroke-width="3"/>
+  <path d="M44 43c3-5 6-7 10-6" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" opacity=".62"/>
+  <path d="M28 61c6 5 12 5 18 0M50 61c6 5 12 5 18 0" fill="none" stroke="#f4dfad" stroke-width="2.8" stroke-linecap="round" opacity=".78"/>
+  
+</svg>
