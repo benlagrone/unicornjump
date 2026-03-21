@@ -240,6 +240,22 @@ const worldGateSpritesByBiome = {
   'bluebonnet-prairie': asset('world/bluebonnet-prairie/gate/windmill-gate.svg'),
 };
 
+const platformTrimSpritesByBiome = {
+  'lantern-bamboo-valley': asset('world/lantern-bamboo-valley/platform/trim.svg'),
+  'highland-meadow': asset('world/highland-meadow/platform/trim.svg'),
+  'storybook-forest': asset('world/storybook-forest/platform/trim.svg'),
+  'sun-orchard': asset('world/sun-orchard/platform/trim.svg'),
+  'bluebonnet-prairie': asset('world/bluebonnet-prairie/platform/trim.svg'),
+};
+
+const landingGroundCapSpritesByBiome = {
+  'lantern-bamboo-valley': asset('world/lantern-bamboo-valley/ground/cap.svg'),
+  'highland-meadow': asset('world/highland-meadow/ground/cap.svg'),
+  'storybook-forest': asset('world/storybook-forest/ground/cap.svg'),
+  'sun-orchard': asset('world/sun-orchard/ground/cap.svg'),
+  'bluebonnet-prairie': asset('world/bluebonnet-prairie/ground/cap.svg'),
+};
+
 const obstacleSpritesByBiome = {
   'lantern-bamboo-valley': [asset('obstacle/lantern-fox-ember.svg')],
   'highland-meadow': [asset('obstacle/meadow-sheep-cloud.svg')],
@@ -381,6 +397,11 @@ export const getWorldLandmarkSpriteAsset = ({ biomeId }) =>
   worldLandmarkSpritesByBiome[biomeId] || null;
 
 export const getWorldGateSpriteAsset = ({ biomeId }) => worldGateSpritesByBiome[biomeId] || null;
+
+export const getPlatformTrimAsset = ({ biomeId }) => platformTrimSpritesByBiome[biomeId] || null;
+
+export const getLandingGroundCapAsset = ({ biomeId }) =>
+  landingGroundCapSpritesByBiome[biomeId] || null;
 
 export const getObstacleSpriteAsset = ({ biomeId }) => {
   const candidates = obstacleSpritesByBiome[biomeId];

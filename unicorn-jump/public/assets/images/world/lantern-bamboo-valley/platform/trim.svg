@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 56" preserveAspectRatio="none">
+  
+<defs>
+  <linearGradient id="bamboo-wood" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#a77a56"/>
+    <stop offset="1" stop-color="#6f4c33"/>
+  </linearGradient>
+  <linearGradient id="bamboo-lantern" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#fff7d1"/>
+    <stop offset=".55" stop-color="#ffd67a"/>
+    <stop offset="1" stop-color="#f29f38"/>
+  </linearGradient>
+  <radialGradient id="bamboo-glow" cx=".5" cy=".46" r=".62">
+    <stop offset="0" stop-color="#fff8da"/>
+    <stop offset=".58" stop-color="#ffd27c" stop-opacity=".72"/>
+    <stop offset="1" stop-color="#ffd27c" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+
+  
+  <path d="M18 16C52 6 188 6 222 16" fill="none" stroke="#9bcf86" stroke-width="8" stroke-linecap="round" opacity=".48"/>
+  <path d="M18 21C56 12 184 12 222 21" fill="none" stroke="#ffe09c" stroke-width="3.2" stroke-linecap="round" opacity=".74"/>
+  <path d="M32 20v11M76 18v14M120 20v11M164 18v14M208 20v11" fill="none" stroke="#76503a" stroke-width="2.4" stroke-linecap="round" opacity=".82"/>
+  <path d="M20 28c34-8 166-8 200 0" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="58" cy="29" r="8" fill="url(#bamboo-glow)" opacity=".52"/>
+  <circle cx="172" cy="29" r="8" fill="url(#bamboo-glow)" opacity=".52"/>
+  <path d="M54 19h8v10c0 2.6-1.7 4.1-4 4.1s-4-1.5-4-4.1z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="1.8" stroke-linejoin="round" opacity=".9"/>
+  <path d="M168 19h8v10c0 2.6-1.7 4.1-4 4.1s-4-1.5-4-4.1z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="1.8" stroke-linejoin="round" opacity=".9"/>
+  <path d="M34 35c10 5 22 5 32 0M96 35c10 5 22 5 32 0M158 35c10 5 22 5 32 0" fill="none" stroke="#8eb973" stroke-width="3.2" stroke-linecap="round" opacity=".76"/>
+  
+</svg>

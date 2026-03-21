@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 92" preserveAspectRatio="none">
+  
+<defs>
+  <linearGradient id="story-bark" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#9d734d"/>
+    <stop offset="1" stop-color="#6d4f39"/>
+  </linearGradient>
+  <linearGradient id="story-leaves" x1=".18" y1=".08" x2=".84" y2=".92">
+    <stop offset="0" stop-color="#dff4bb"/>
+    <stop offset=".48" stop-color="#8dcf7e"/>
+    <stop offset="1" stop-color="#4d9a68"/>
+  </linearGradient>
+  <linearGradient id="story-cap" x1=".28" y1=".06" x2=".8" y2=".92">
+    <stop offset="0" stop-color="#ffcfb0"/>
+    <stop offset=".55" stop-color="#ef8b6d"/>
+    <stop offset="1" stop-color="#d76a59"/>
+  </linearGradient>
+  <radialGradient id="story-window" cx=".5" cy=".5" r=".62">
+    <stop offset="0" stop-color="#fff8d3"/>
+    <stop offset="1" stop-color="#ffc864"/>
+  </radialGradient>
+</defs>
+
+  
+  <path d="M18 19C56 9 224 9 262 19" fill="none" stroke="#cfe6a7" stroke-width="10" stroke-linecap="round" opacity=".5"/>
+  <path d="M18 27C58 17 222 17 262 27" fill="none" stroke="#f7edd8" stroke-width="4" stroke-linecap="round" opacity=".84"/>
+  <path d="M26 35c12-8 26-8 38 0M92 35c12-8 26-8 38 0M158 35c12-8 26-8 38 0M224 35c12-8 26-8 38 0" fill="none" stroke="#8bc17a" stroke-width="4" stroke-linecap="round" opacity=".74"/>
+  <path d="M44 20c8 6 16 7 24 4M128 18c8 6 16 7 24 4M212 20c8 6 16 7 24 4" fill="none" stroke="#fff3d4" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+  <path d="M68 35l2.2 4.6 5 .8-3.6 3.4.8 5-4.4-2.3-4.4 2.3.8-5-3.6-3.4 5-.8z" fill="#ffe6a5" stroke="#d7ac55" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M140 29l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff0bd" stroke="#d7ac55" stroke-width="1.3" stroke-linejoin="round"/>
+  <path d="M212 35l2.2 4.6 5 .8-3.6 3.4.8 5-4.4-2.3-4.4 2.3.8-5-3.6-3.4 5-.8z" fill="#ffe6a5" stroke="#d7ac55" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M52 52c-4 8-6 14-8 22M140 48c0 10-2 16-6 26M226 52c4 8 6 14 8 22" fill="none" stroke="#89b879" stroke-width="4" stroke-linecap="round" opacity=".68"/>
+  
+</svg>

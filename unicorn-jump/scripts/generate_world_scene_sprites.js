@@ -17,6 +17,13 @@ const wrapSvg = (defs, body) => `
 </svg>
 `;
 
+const wrapStretchSvg = (width, height, defs, body) => `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+  ${defs}
+  ${body}
+</svg>
+`;
+
 const bambooDefs = `
 <defs>
   <linearGradient id="bamboo-wood" x1=".5" y1="0" x2=".5" y2="1">
@@ -363,24 +370,204 @@ const windmillGateSvg = wrapSvg(
   `
 );
 
+const bambooPlatformTrimSvg = wrapStretchSvg(
+  240,
+  56,
+  bambooDefs,
+  `
+  <path d="M18 16C52 6 188 6 222 16" fill="none" stroke="#9bcf86" stroke-width="8" stroke-linecap="round" opacity=".48"/>
+  <path d="M18 21C56 12 184 12 222 21" fill="none" stroke="#ffe09c" stroke-width="3.2" stroke-linecap="round" opacity=".74"/>
+  <path d="M32 20v11M76 18v14M120 20v11M164 18v14M208 20v11" fill="none" stroke="#76503a" stroke-width="2.4" stroke-linecap="round" opacity=".82"/>
+  <path d="M20 28c34-8 166-8 200 0" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="58" cy="29" r="8" fill="url(#bamboo-glow)" opacity=".52"/>
+  <circle cx="172" cy="29" r="8" fill="url(#bamboo-glow)" opacity=".52"/>
+  <path d="M54 19h8v10c0 2.6-1.7 4.1-4 4.1s-4-1.5-4-4.1z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="1.8" stroke-linejoin="round" opacity=".9"/>
+  <path d="M168 19h8v10c0 2.6-1.7 4.1-4 4.1s-4-1.5-4-4.1z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="1.8" stroke-linejoin="round" opacity=".9"/>
+  <path d="M34 35c10 5 22 5 32 0M96 35c10 5 22 5 32 0M158 35c10 5 22 5 32 0" fill="none" stroke="#8eb973" stroke-width="3.2" stroke-linecap="round" opacity=".76"/>
+  `
+);
+
+const bambooGroundCapSvg = wrapStretchSvg(
+  280,
+  92,
+  bambooDefs,
+  `
+  <path d="M16 18C56 6 224 6 264 18" fill="none" stroke="#9fd48a" stroke-width="10" stroke-linecap="round" opacity=".5"/>
+  <path d="M16 26C58 14 222 14 264 26" fill="none" stroke="#ffe3a6" stroke-width="4" stroke-linecap="round" opacity=".78"/>
+  <path d="M38 28v14M88 24v18M140 28v14M192 24v18M242 28v14" fill="none" stroke="#76503a" stroke-width="3" stroke-linecap="round" opacity=".84"/>
+  <circle cx="72" cy="36" r="12" fill="url(#bamboo-glow)" opacity=".56"/>
+  <circle cx="208" cy="36" r="12" fill="url(#bamboo-glow)" opacity=".56"/>
+  <path d="M66 24h12v14c0 3.2-2.4 5-6 5s-6-1.8-6-5z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="2" stroke-linejoin="round" opacity=".92"/>
+  <path d="M202 24h12v14c0 3.2-2.4 5-6 5s-6-1.8-6-5z" fill="url(#bamboo-lantern)" stroke="#7a5736" stroke-width="2" stroke-linejoin="round" opacity=".92"/>
+  <path d="M30 46c18 8 44 8 62 0M108 46c18 8 44 8 62 0M186 46c18 8 44 8 62 0" fill="none" stroke="#90bb74" stroke-width="4" stroke-linecap="round" opacity=".78"/>
+  <path d="M52 48c0 10-4 18-8 28M126 48c2 12 0 20-4 30M222 48c-2 12-1 20 4 28" fill="none" stroke="#73a273" stroke-width="4" stroke-linecap="round" opacity=".76"/>
+  `
+);
+
+const meadowPlatformTrimSvg = wrapStretchSvg(
+  240,
+  56,
+  meadowDefs,
+  `
+  <path d="M18 18C52 10 188 10 222 18" fill="none" stroke="#d7efe1" stroke-width="8" stroke-linecap="round" opacity=".5"/>
+  <path d="M18 24C56 16 184 16 222 24" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" opacity=".84"/>
+  <ellipse cx="52" cy="22" rx="12" ry="6.5" fill="url(#meadow-wool)" opacity=".88"/>
+  <ellipse cx="122" cy="18" rx="14" ry="7.2" fill="url(#meadow-wool)" opacity=".86"/>
+  <ellipse cx="192" cy="22" rx="12" ry="6.5" fill="url(#meadow-wool)" opacity=".88"/>
+  <circle cx="40" cy="31" r="3" fill="#e8b9ff" stroke="#b67bd8" stroke-width="1.4"/>
+  <circle cx="66" cy="29" r="3" fill="#f7f1ff" stroke="#b67bd8" stroke-width="1.4"/>
+  <circle cx="110" cy="29" r="3" fill="#e8b9ff" stroke="#b67bd8" stroke-width="1.4"/>
+  <circle cx="136" cy="31" r="3" fill="#f7f1ff" stroke="#b67bd8" stroke-width="1.4"/>
+  <circle cx="180" cy="29" r="3" fill="#e8b9ff" stroke="#b67bd8" stroke-width="1.4"/>
+  <circle cx="206" cy="31" r="3" fill="#f7f1ff" stroke="#b67bd8" stroke-width="1.4"/>
+  <path d="M28 35c14 5 30 5 44 0M96 35c14 5 30 5 44 0M164 35c14 5 30 5 44 0" fill="none" stroke="#84bf8f" stroke-width="3" stroke-linecap="round" opacity=".72"/>
+  `
+);
+
+const meadowGroundCapSvg = wrapStretchSvg(
+  280,
+  92,
+  meadowDefs,
+  `
+  <path d="M18 20C56 10 224 10 262 20" fill="none" stroke="#d7efe1" stroke-width="10" stroke-linecap="round" opacity=".54"/>
+  <path d="M18 28C58 18 222 18 262 28" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity=".84"/>
+  <ellipse cx="58" cy="23" rx="16" ry="8.4" fill="url(#meadow-wool)" opacity=".9"/>
+  <ellipse cx="140" cy="18" rx="18" ry="9" fill="url(#meadow-wool)" opacity=".88"/>
+  <ellipse cx="222" cy="23" rx="16" ry="8.4" fill="url(#meadow-wool)" opacity=".9"/>
+  <circle cx="44" cy="38" r="3.4" fill="#e8b9ff" stroke="#b67bd8" stroke-width="1.5"/>
+  <circle cx="70" cy="34" r="3.4" fill="#f7f1ff" stroke="#b67bd8" stroke-width="1.5"/>
+  <circle cx="118" cy="35" r="3.4" fill="#e8b9ff" stroke="#b67bd8" stroke-width="1.5"/>
+  <circle cx="144" cy="39" r="3.4" fill="#f7f1ff" stroke="#b67bd8" stroke-width="1.5"/>
+  <circle cx="192" cy="35" r="3.4" fill="#e8b9ff" stroke="#b67bd8" stroke-width="1.5"/>
+  <circle cx="218" cy="39" r="3.4" fill="#f7f1ff" stroke="#b67bd8" stroke-width="1.5"/>
+  <path d="M32 48c16 7 36 7 52 0M114 48c16 7 36 7 52 0M196 48c16 7 36 7 52 0" fill="none" stroke="#86c090" stroke-width="4" stroke-linecap="round" opacity=".74"/>
+  <path d="M54 50c-6 8-8 14-8 24M136 50c0 10-2 16-6 26M226 50c4 8 6 14 8 22" fill="none" stroke="#93c89b" stroke-width="4" stroke-linecap="round" opacity=".68"/>
+  `
+);
+
+const storyPlatformTrimSvg = wrapStretchSvg(
+  240,
+  56,
+  storyDefs,
+  `
+  <path d="M18 17C52 8 188 8 222 17" fill="none" stroke="#cfe6a7" stroke-width="8" stroke-linecap="round" opacity=".48"/>
+  <path d="M18 23C56 14 184 14 222 23" fill="none" stroke="#f6ecd8" stroke-width="3.4" stroke-linecap="round" opacity=".82"/>
+  <path d="M26 28c10-7 22-7 32 0M82 28c10-7 22-7 32 0M138 28c10-7 22-7 32 0M194 28c10-7 22-7 32 0" fill="none" stroke="#8bc17a" stroke-width="3.2" stroke-linecap="round" opacity=".72"/>
+  <path d="M36 16c6 5 12 6 18 3M112 14c7 6 13 7 20 4M188 16c6 5 12 6 18 3" fill="none" stroke="#fff3d4" stroke-width="2.8" stroke-linecap="round" opacity=".7"/>
+  <path d="M56 28l2 4 4.4.7-3.2 3 .8 4.4-4-2.1-4 2.1.8-4.4-3.2-3 4.4-.7z" fill="#ffe6a5" stroke="#d7ac55" stroke-width="1.4" stroke-linejoin="round"/>
+  <path d="M122 24l1.8 3.4 3.8.6-2.8 2.6.6 3.8-3.4-1.8-3.4 1.8.6-3.8-2.8-2.6 3.8-.6z" fill="#fff0bd" stroke="#d7ac55" stroke-width="1.2" stroke-linejoin="round"/>
+  <path d="M188 28l2 4 4.4.7-3.2 3 .8 4.4-4-2.1-4 2.1.8-4.4-3.2-3 4.4-.7z" fill="#ffe6a5" stroke="#d7ac55" stroke-width="1.4" stroke-linejoin="round"/>
+  `
+);
+
+const storyGroundCapSvg = wrapStretchSvg(
+  280,
+  92,
+  storyDefs,
+  `
+  <path d="M18 19C56 9 224 9 262 19" fill="none" stroke="#cfe6a7" stroke-width="10" stroke-linecap="round" opacity=".5"/>
+  <path d="M18 27C58 17 222 17 262 27" fill="none" stroke="#f7edd8" stroke-width="4" stroke-linecap="round" opacity=".84"/>
+  <path d="M26 35c12-8 26-8 38 0M92 35c12-8 26-8 38 0M158 35c12-8 26-8 38 0M224 35c12-8 26-8 38 0" fill="none" stroke="#8bc17a" stroke-width="4" stroke-linecap="round" opacity=".74"/>
+  <path d="M44 20c8 6 16 7 24 4M128 18c8 6 16 7 24 4M212 20c8 6 16 7 24 4" fill="none" stroke="#fff3d4" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+  <path d="M68 35l2.2 4.6 5 .8-3.6 3.4.8 5-4.4-2.3-4.4 2.3.8-5-3.6-3.4 5-.8z" fill="#ffe6a5" stroke="#d7ac55" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M140 29l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6z" fill="#fff0bd" stroke="#d7ac55" stroke-width="1.3" stroke-linejoin="round"/>
+  <path d="M212 35l2.2 4.6 5 .8-3.6 3.4.8 5-4.4-2.3-4.4 2.3.8-5-3.6-3.4 5-.8z" fill="#ffe6a5" stroke="#d7ac55" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M52 52c-4 8-6 14-8 22M140 48c0 10-2 16-6 26M226 52c4 8 6 14 8 22" fill="none" stroke="#89b879" stroke-width="4" stroke-linecap="round" opacity=".68"/>
+  `
+);
+
+const orchardPlatformTrimSvg = wrapStretchSvg(
+  240,
+  56,
+  orchardDefs,
+  `
+  <path d="M18 16C52 7 188 7 222 16" fill="none" stroke="#b9df86" stroke-width="8" stroke-linecap="round" opacity=".5"/>
+  <path d="M18 22C56 13 184 13 222 22" fill="none" stroke="#ffe1a1" stroke-width="3.4" stroke-linecap="round" opacity=".82"/>
+  <path d="M26 27c12-9 24-11 40-10M92 22c12 0 22 2 36 10M148 27c12-9 24-11 40-10M214 22c-10 1-18 4-26 10" fill="none" stroke="url(#orchard-leaf)" stroke-width="4" stroke-linecap="round" opacity=".8"/>
+  <circle cx="52" cy="27" r="4.2" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="1.6"/>
+  <circle cx="116" cy="24" r="4.6" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="1.6"/>
+  <circle cx="180" cy="27" r="4.2" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="1.6"/>
+  <path d="M34 34c14 5 30 5 44 0M98 34c14 5 30 5 44 0M162 34c14 5 30 5 44 0" fill="none" stroke="#f3d58f" stroke-width="3" stroke-linecap="round" opacity=".74"/>
+  `
+);
+
+const orchardGroundCapSvg = wrapStretchSvg(
+  280,
+  92,
+  orchardDefs,
+  `
+  <path d="M18 18C56 8 224 8 262 18" fill="none" stroke="#b9df86" stroke-width="10" stroke-linecap="round" opacity=".52"/>
+  <path d="M18 26C58 16 222 16 262 26" fill="none" stroke="#ffe2a6" stroke-width="4" stroke-linecap="round" opacity=".84"/>
+  <path d="M28 34c14-10 28-12 46-11M104 22c14 0 26 4 42 12M162 34c14-10 28-12 46-11M252 23c-12 1-22 5-32 11" fill="none" stroke="url(#orchard-leaf)" stroke-width="5" stroke-linecap="round" opacity=".82"/>
+  <circle cx="58" cy="34" r="4.8" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="1.8"/>
+  <circle cx="138" cy="28" r="5.2" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="1.8"/>
+  <circle cx="216" cy="34" r="4.8" fill="url(#orchard-fruit)" stroke="#cc711f" stroke-width="1.8"/>
+  <path d="M36 46c16 6 34 6 50 0M114 46c16 6 34 6 50 0M192 46c16 6 34 6 50 0" fill="none" stroke="#f3d58f" stroke-width="4" stroke-linecap="round" opacity=".74"/>
+  <path d="M64 48c-4 8-6 14-8 22M140 48c0 10-2 16-6 26M214 48c4 8 6 14 8 22" fill="none" stroke="#79b05c" stroke-width="4" stroke-linecap="round" opacity=".68"/>
+  `
+);
+
+const prairiePlatformTrimSvg = wrapStretchSvg(
+  240,
+  56,
+  prairieDefs,
+  `
+  <path d="M18 17C52 8 188 8 222 17" fill="none" stroke="#cfe9ff" stroke-width="8" stroke-linecap="round" opacity=".48"/>
+  <path d="M18 23C56 14 184 14 222 23" fill="none" stroke="#f8fbff" stroke-width="3.2" stroke-linecap="round" opacity=".84"/>
+  <path d="M28 31c12-10 24-10 36 0M92 31c12-10 24-10 36 0M156 31c12-10 24-10 36 0" fill="none" stroke="#9bc5ff" stroke-width="3.4" stroke-linecap="round" opacity=".76"/>
+  <path d="M44 22c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="1.5"/>
+  <path d="M118 18c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="1.5"/>
+  <path d="M192 22c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="1.5"/>
+  <circle cx="70" cy="28" r="6.5" fill="url(#prairie-firefly)" opacity=".58"/>
+  <circle cx="170" cy="28" r="6.5" fill="url(#prairie-firefly)" opacity=".58"/>
+  `
+);
+
+const prairieGroundCapSvg = wrapStretchSvg(
+  280,
+  92,
+  prairieDefs,
+  `
+  <path d="M18 19C56 9 224 9 262 19" fill="none" stroke="#cfe9ff" stroke-width="10" stroke-linecap="round" opacity=".52"/>
+  <path d="M18 27C58 17 222 17 262 27" fill="none" stroke="#f8fbff" stroke-width="4" stroke-linecap="round" opacity=".84"/>
+  <path d="M30 38c14-12 28-12 42 0M104 38c14-12 28-12 42 0M178 38c14-12 28-12 42 0" fill="none" stroke="#9bc5ff" stroke-width="4" stroke-linecap="round" opacity=".76"/>
+  <path d="M48 24c3-8 7-10 12-8-2 4-2 7-1 11-4 1-8-1-11-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="1.6"/>
+  <path d="M136 20c3-8 7-10 12-8-2 4-2 7-1 11-4 1-8-1-11-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="1.6"/>
+  <path d="M224 24c3-8 7-10 12-8-2 4-2 7-1 11-4 1-8-1-11-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="1.6"/>
+  <circle cx="84" cy="31" r="9" fill="url(#prairie-firefly)" opacity=".6"/>
+  <circle cx="194" cy="31" r="9" fill="url(#prairie-firefly)" opacity=".6"/>
+  <path d="M64 48c-4 8-6 14-8 22M140 48c0 10-2 16-6 26M214 48c4 8 6 14 8 22" fill="none" stroke="#7db07a" stroke-width="4" stroke-linecap="round" opacity=".68"/>
+  `
+);
+
 const entries = [
   ['world/lantern-bamboo-valley/props', 'tea-table.svg', teaTableSvg],
   ['world/lantern-bamboo-valley/landmark', 'lantern-stand.svg', lanternStandSvg],
   ['world/lantern-bamboo-valley/gate', 'sky-lantern-gate.svg', skyLanternGateSvg],
+  ['world/lantern-bamboo-valley/platform', 'trim.svg', bambooPlatformTrimSvg],
+  ['world/lantern-bamboo-valley/ground', 'cap.svg', bambooGroundCapSvg],
   ['world/highland-meadow/props', 'wool-cart.svg', woolCartSvg],
   ['world/highland-meadow/landmark', 'stone-circle.svg', stoneCircleSvg],
   ['world/highland-meadow/gate', 'breeze-arch.svg', breezeArchSvg],
+  ['world/highland-meadow/platform', 'trim.svg', meadowPlatformTrimSvg],
+  ['world/highland-meadow/ground', 'cap.svg', meadowGroundCapSvg],
   ['world/storybook-forest/props', 'mushroom-house.svg', mushroomHouseSvg],
   ['world/storybook-forest/landmark', 'story-tree.svg', storyTreeSvg],
   ['world/storybook-forest/gate', 'page-arch.svg', pageArchSvg],
+  ['world/storybook-forest/platform', 'trim.svg', storyPlatformTrimSvg],
+  ['world/storybook-forest/ground', 'cap.svg', storyGroundCapSvg],
   ['world/sun-orchard/props', 'mirror-stand.svg', mirrorStandSvg],
   ['world/sun-orchard/landmark', 'citrus-arbor.svg', citrusArborSvg],
   ['world/sun-orchard/gate', 'golden-arbor.svg', goldenArborGateSvg],
+  ['world/sun-orchard/platform', 'trim.svg', orchardPlatformTrimSvg],
+  ['world/sun-orchard/ground', 'cap.svg', orchardGroundCapSvg],
   ['world/bluebonnet-prairie/props', 'windmill-post.svg', windmillPostSvg],
   ['world/bluebonnet-prairie/landmark', 'bluebonnet-patch.svg', bluebonnetPatchSvg],
   ['world/bluebonnet-prairie/gate', 'windmill-gate.svg', windmillGateSvg],
+  ['world/bluebonnet-prairie/platform', 'trim.svg', prairiePlatformTrimSvg],
+  ['world/bluebonnet-prairie/ground', 'cap.svg', prairieGroundCapSvg],
 ];
 
 entries.forEach(([folder, filename, svg]) => writeSprite(folder, filename, svg));
 
-console.log('Generated world scene prop, landmark, and gate sprites.');
+console.log('Generated world scene prop, landmark, gate, platform, and ground sprites.');

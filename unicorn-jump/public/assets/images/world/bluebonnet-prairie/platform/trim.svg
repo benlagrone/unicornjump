@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 56" preserveAspectRatio="none">
+  
+<defs>
+  <linearGradient id="prairie-post" x1=".5" y1="0" x2=".5" y2="1">
+    <stop offset="0" stop-color="#f4f7ff"/>
+    <stop offset="1" stop-color="#b9cce8"/>
+  </linearGradient>
+  <linearGradient id="prairie-leaf" x1=".3" y1=".1" x2=".78" y2=".94">
+    <stop offset="0" stop-color="#d6f6be"/>
+    <stop offset=".5" stop-color="#85c86d"/>
+    <stop offset="1" stop-color="#4a9758"/>
+  </linearGradient>
+  <radialGradient id="prairie-petal" cx=".45" cy=".32" r=".72">
+    <stop offset="0" stop-color="#f8fbff"/>
+    <stop offset=".46" stop-color="#8fb8ff"/>
+    <stop offset="1" stop-color="#4966db"/>
+  </radialGradient>
+  <radialGradient id="prairie-firefly" cx=".5" cy=".45" r=".62">
+    <stop offset="0" stop-color="#fff8d8"/>
+    <stop offset=".6" stop-color="#bce9ff" stop-opacity=".74"/>
+    <stop offset="1" stop-color="#bce9ff" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+
+  
+  <path d="M18 17C52 8 188 8 222 17" fill="none" stroke="#cfe9ff" stroke-width="8" stroke-linecap="round" opacity=".48"/>
+  <path d="M18 23C56 14 184 14 222 23" fill="none" stroke="#f8fbff" stroke-width="3.2" stroke-linecap="round" opacity=".84"/>
+  <path d="M28 31c12-10 24-10 36 0M92 31c12-10 24-10 36 0M156 31c12-10 24-10 36 0" fill="none" stroke="#9bc5ff" stroke-width="3.4" stroke-linecap="round" opacity=".76"/>
+  <path d="M44 22c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="1.5"/>
+  <path d="M118 18c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="1.5"/>
+  <path d="M192 22c3-7 7-9 11-7-2 3-2 6-1 10-4 0-7-1-10-3z" fill="url(#prairie-petal)" stroke="#4d67d8" stroke-width="1.5"/>
+  <circle cx="70" cy="28" r="6.5" fill="url(#prairie-firefly)" opacity=".58"/>
+  <circle cx="170" cy="28" r="6.5" fill="url(#prairie-firefly)" opacity=".58"/>
+  
+</svg>

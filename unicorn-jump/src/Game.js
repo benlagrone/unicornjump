@@ -35,9 +35,11 @@ import {
 import {
   getCompanionSpriteAsset,
   getCreatureSpriteAsset,
+  getLandingGroundCapAsset,
   getWorldGateSpriteAsset,
   getLandingVillageSpriteAsset,
   getObstacleSpriteAsset,
+  getPlatformTrimAsset,
   getQuestItemSpriteAsset,
   getRescueLeafSpriteAsset,
   getWorldLandmarkSpriteAsset,
@@ -3685,6 +3687,12 @@ const Game = ({
   const worldGateSpriteSrc = getWorldGateSpriteAsset({
     biomeId: biome.id,
   });
+  const platformTrimSpriteSrc = getPlatformTrimAsset({
+    biomeId: biome.id,
+  });
+  const landingGroundCapSpriteSrc = getLandingGroundCapAsset({
+    biomeId: biome.id,
+  });
   const landingGroundTheme = getLandingGroundTheme(biome.id);
   const landingGroundImage = pickPlatformImage(biomeIndex * 2 + 1);
   const landingGroundVisualHeight = worldScene
@@ -4076,10 +4084,14 @@ const Game = ({
                     flex: `0 0 ${landingGroundTileWidth}px`,
                     height: landingGroundCapHeight,
                     marginLeft: index === 0 ? 0 : compactHud ? -22 : -28,
-                    backgroundImage: `url(${landingGroundImage})`,
-                    backgroundSize: '100% 100%',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center',
+                    backgroundImage: landingGroundCapSpriteSrc
+                      ? `url(${landingGroundCapSpriteSrc}), url(${landingGroundImage})`
+                      : `url(${landingGroundImage})`,
+                    backgroundSize: landingGroundCapSpriteSrc
+                      ? '100% 100%, 100% 100%'
+                      : '100% 100%',
+                    backgroundRepeat: landingGroundCapSpriteSrc ? 'no-repeat, no-repeat' : 'no-repeat',
+                    backgroundPosition: landingGroundCapSpriteSrc ? 'center, center' : 'center',
                     transform:
                       index % 2 === 1
                         ? 'translateY(4px) scaleX(-1)'
@@ -4886,10 +4898,12 @@ const Game = ({
               top: screenY,
               width: platform.width,
               height: platform.height,
-              backgroundImage: `url(${platform.image})`,
-              backgroundSize: '100% 100%',
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center',
+              backgroundImage: platformTrimSpriteSrc
+                ? `url(${platformTrimSpriteSrc}), url(${platform.image})`
+                : `url(${platform.image})`,
+              backgroundSize: platformTrimSpriteSrc ? '100% 100%, 100% 100%' : '100% 100%',
+              backgroundRepeat: platformTrimSpriteSrc ? 'no-repeat, no-repeat' : 'no-repeat',
+              backgroundPosition: platformTrimSpriteSrc ? 'center, center' : 'center',
               filter: platform.isGoal
                 ? renderState.quest.completed
                   ? `drop-shadow(0 0 18px ${biome.palette.platformGlow})`
