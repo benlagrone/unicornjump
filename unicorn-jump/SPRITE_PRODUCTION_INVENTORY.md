@@ -33,10 +33,12 @@ Based on `public/assets/images/` today:
 - platform PNGs: `7`
 - ground PNGs: `2`
 - world prop / landmark SVGs: `10`
+- world gate SVGs: `5`
+- biome platform trim SVGs: `5`
+- biome ground cap SVGs: `5`
 - builder house themes defined in runtime: `9`
 - builder room shell themes defined in runtime: `9`
 - builder furniture definitions defined in runtime: `28`
-- dedicated biome gate files on disk: `0`
 - dedicated hub asset files on disk: `0`
 - dedicated splash world map asset files on disk: `0`
 
@@ -46,7 +48,7 @@ Based on `public/assets/images/` today:
 - The landing-screen map pointer uses `public/assets/images/character/unicorn_little.svg` in `src/App.js`.
 - `src/spriteCatalog.js` currently wires all five biome creature families, all five companion families, all five collectible families, the rescue leaf, and one obstruction family per biome.
 - The builder now has runtime-defined themed houses, themed room shells, and theme-filtered furniture trays, but those families still need to move through the same `Good` / `Better` / `Best` quality gates as the core gameplay art.
-- World-building props and landmarks now exist as discrete biome files on disk, but gates, hub art, splash-map node art, and per-biome background stacks are still mostly missing.
+- World-building props, landmarks, gates, platform trims, and landing-ground caps now exist as discrete biome files on disk, but hub art, splash-map node art, and per-biome background stacks are still mostly missing.
 
 ## Global Inventory Matrix
 
@@ -68,7 +70,9 @@ Based on `public/assets/images/` today:
 | Ground kit | `2` PNGs | Yes | `Good` to `Better` | `Better` | give each biome its own landing-floor language |
 | Generic power-ups | `2` PNGs | legacy / fallback | legacy | replace over time | supersede with cute hearts, gems, and biome-specific pickups |
 | Biome props / landmarks | `10` SVGs total | Yes, landing scenes now load them | `Good` | `Better` to `Best` | deepen each biome package beyond one prop plus one landmark |
-| Biome gates | no dedicated files | No | missing | `Better` to `Best` | create real gate folders and stop relying on scene composition |
+| Biome gates | `5` SVGs total | Yes, landing scenes now load them | `Good` | `Better` to `Best` | deepen each biome gate family with more silhouette detail and activation-state polish |
+| Biome platform trims | `5` SVGs total | Yes, gameplay platforms now load them | `Good` | `Better` to `Best` | push stronger silhouette cues and more biome-specific surface language |
+| Biome ground caps | `5` SVGs total | Yes, landing floors now load them | `Good` | `Better` to `Best` | deepen landing-floor identity and tie it closer to each biome landmark set |
 | Hub world art | no dedicated files | No | missing | `Best` | define Lantern Garden asset kit |
 | Splash world map art set | no dedicated files, mostly inline composition | Partially | `Good` composition, not a true asset set | `Best` | convert the map into a real reusable art package |
 
@@ -76,11 +80,11 @@ Based on `public/assets/images/` today:
 
 | Biome | Quest giver | Companion | Pickup | Obstruction | Landing props / landmark / gate | Background / platform world layer | Current read |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Lantern Bamboo Valley | `Lantern Fox` `9/9` SVG, wired | `Glow Fox` `9/9` SVG, wired | `Lantern Seed` files `3/3`, wired, but game language now reads more like `lantern heart` | `lantern-fox-ember.svg` `1/1`, wired | `Tea Table` and `Lantern Stand` now exist as discrete SVGs; `Sky Lantern Gate` is still config-driven | uses shared raster background/platform kit, not a full bespoke parallax asset stack | character layer present; world package started, not finished |
-| Highland Meadow | `Highland Sheep` `9/9` SVG, wired | `Wind Sheep` `9/9` SVG, wired | `Meadow Song` `3/3`, wired | `meadow-sheep-cloud.svg` `1/1`, wired | `Wool Cart` and `Stone Circle` now exist as discrete SVGs; `Breeze Arch` is still config-driven | uses shared raster background/platform kit | sprite coverage present; world package started, not finished |
-| Storybook Forest | `Story Gnome` `9/9` SVG, wired | `Butterfly Spirit` `9/9` SVG, wired | `Story Star` `3/3`, wired | `story-gnome-whirl.svg` `1/1`, wired | `Mushroom House` and `Story Tree` now exist as discrete SVGs; `Page Arch` is still config-driven | uses shared raster background/platform kit | complete gameplay sprite shell, partial world package |
-| Sun Orchard | `Orchard Bird` `9/9` SVG, wired | `Songbird` `9/9` SVG, wired | `Sun Drop` `3/3`, wired | `orchard-bird-burst.svg` `1/1`, wired | `Mirror Stand` and `Citrus Arbor` now exist as discrete SVGs; `Golden Arbor` is still config-driven | uses shared raster background/platform kit | full gameplay coverage, partial world package |
-| Bluebonnet Prairie | `Prairie Armadillo` `9/9` SVG, wired | `Firefly Friend` `9/9` SVG, wired | `Firefly` `3/3`, wired | `prairie-armadillo-roll.svg` `1/1`, wired | `Windmill Post` and `Bluebonnet Patch` now exist as discrete SVGs; `Windmill Gate` is still config-driven | uses shared raster background/platform kit | gameplay sprite set present, partial world package |
+| Lantern Bamboo Valley | `Lantern Fox` `9/9` SVG, wired | `Glow Fox` `9/9` SVG, wired | `Lantern Seed` files `3/3`, wired, but game language now reads more like `lantern heart` | `lantern-fox-ember.svg` `1/1`, wired | `Tea Table`, `Lantern Stand`, and `Sky Lantern Gate` now exist as discrete SVGs | shared raster base now layered with Bamboo trim + ground-cap overlays | character layer present; surface identity is now biome-specific |
+| Highland Meadow | `Highland Sheep` `9/9` SVG, wired | `Wind Sheep` `9/9` SVG, wired | `Meadow Song` `3/3`, wired | `meadow-sheep-cloud.svg` `1/1`, wired | `Wool Cart`, `Stone Circle`, and `Breeze Arch` now exist as discrete SVGs | shared raster base now layered with Meadow trim + ground-cap overlays | sprite coverage present; surface identity is now biome-specific |
+| Storybook Forest | `Story Gnome` `9/9` SVG, wired | `Butterfly Spirit` `9/9` SVG, wired | `Story Star` `3/3`, wired | `story-gnome-whirl.svg` `1/1`, wired | `Mushroom House`, `Story Tree`, and `Page Arch` now exist as discrete SVGs | shared raster base now layered with Storybook trim + ground-cap overlays | complete gameplay sprite shell, fuller landing package |
+| Sun Orchard | `Orchard Bird` `9/9` SVG, wired | `Songbird` `9/9` SVG, wired | `Sun Drop` `3/3`, wired | `orchard-bird-burst.svg` `1/1`, wired | `Mirror Stand`, `Citrus Arbor`, and `Golden Arbor` now exist as discrete SVGs | shared raster base now layered with Orchard trim + ground-cap overlays | full gameplay coverage, fuller landing package |
+| Bluebonnet Prairie | `Prairie Armadillo` `9/9` SVG, wired | `Firefly Friend` `9/9` SVG, wired | `Firefly` `3/3`, wired | `prairie-armadillo-roll.svg` `1/1`, wired | `Windmill Post`, `Bluebonnet Patch`, and `Windmill Gate` now exist as discrete SVGs | shared raster base now layered with Prairie trim + ground-cap overlays | gameplay sprite set present, fuller landing package |
 
 ## What Is Actually Missing
 
@@ -89,11 +93,12 @@ These are the biggest true inventory gaps:
 - faithful SVG gameplay unicorn state sheet
 - deeper prop sets for villages and interactables in every biome
 - deeper landmark sets for each biome beyond the current single landmark file
-- dedicated gate / portal assets for each biome
 - dedicated hub-world asset kit
 - dedicated splash-map asset kit
 - bespoke multi-layer parallax background stacks per biome
 - more than one obstruction variant per biome
+- deeper platform-trim families beyond the first overlay pass
+- deeper landing-ground cap families beyond the first overlay pass
 - deeper `Better` / `Best` builder house exteriors
 - deeper `Better` / `Best` builder room shells
 - deeper `Better` / `Best` builder furniture packs for every active destination

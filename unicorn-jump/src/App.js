@@ -16,6 +16,7 @@ import {
   moveFurnitureInHouse,
   placeHouseOnTile,
   placeFurnitureInHouse,
+  removeFurnitureFromHouse,
 } from './builderState';
 import {
   getBestHarmonyTitle,
@@ -459,42 +460,59 @@ const App = () => {
       const trayItems = getFurnitureCatalogForTheme(activeBuilderHouse.roomTheme?.id);
 
       renderState = () =>
-        JSON.stringify({
-          mode: 'builder-room',
-          coordinateSystem: {
-            origin: 'top-left',
-            xDirection: 'right',
-            yDirection: 'down',
-            units: 'pixels',
-          },
-          house: {
-            id: activeBuilderHouse.id,
-            name: activeBuilderHouse.name,
-            typeId: activeBuilderHouse.typeId,
-            shortLabel: activeBuilderHouse.shortLabel,
-            themeName: activeBuilderHouse.roomTheme?.name,
-            roomWidth: activeBuilderHouse.room.width,
-            roomHeight: activeBuilderHouse.room.height,
-            gridSize: BUILDER_ROOM_GRID_SIZE,
-          },
-          tray: trayItems.map((item) => item.name),
-          furniture: activeBuilderHouse.room.items.map((item) => ({
-            id: item.id,
-            name: item.name,
-            typeId: item.typeId,
-            x: item.x,
-            y: item.y,
-            width: item.width,
-            height: item.height,
-          })),
-        });
+        JSON.stringify((() => {
+          const roomRuntime =
+            typeof window !== 'undefined' && window.__builderRoomRuntime
+              ? window.__builderRoomRuntime
+              : null;
+
+          return {
+            mode: 'builder-room',
+            coordinateSystem: {
+              origin: 'top-left',
+              xDirection: 'right',
+              yDirection: 'down',
+              units: 'pixels',
+            },
+            house: {
+              id: activeBuilderHouse.id,
+              name: activeBuilderHouse.name,
+              typeId: activeBuilderHouse.typeId,
+              shortLabel: activeBuilderHouse.shortLabel,
+              themeName: activeBuilderHouse.roomTheme?.name,
+              roomWidth: activeBuilderHouse.room.width,
+              roomHeight: activeBuilderHouse.room.height,
+              gridSize: BUILDER_ROOM_GRID_SIZE,
+            },
+            tray: trayItems.map((item) => item.name),
+            furniture: activeBuilderHouse.room.items.map((item) => ({
+              id: item.id,
+              name: item.name,
+              typeId: item.typeId,
+              x: item.x,
+              y: item.y,
+              width: item.width,
+              height: item.height,
+            })),
+            player: roomRuntime?.player || null,
+            npcs: roomRuntime?.npcs || [],
+          };
+        })());
     }
 
     if (!renderState) {
       return undefined;
     }
 
-    const advanceTime = () => {};
+    const advanceTime = (ms = 1000 / 60) => {
+      if (
+        screen === 'builderRoom' &&
+        typeof window !== 'undefined' &&
+        typeof window.__advanceBuilderRoom === 'function'
+      ) {
+        window.__advanceBuilderRoom(ms);
+      }
+    };
     window.render_game_to_text = renderState;
     window.advanceTime = advanceTime;
 
@@ -617,6 +635,10 @@ const App = () => {
 
   const handleBuilderMoveFurniture = (houseId, itemId, position) => {
     setBuilderState((currentState) => moveFurnitureInHouse(currentState, houseId, itemId, position));
+  };
+
+  const handleBuilderRemoveFurniture = (houseId, itemId) => {
+    setBuilderState((currentState) => removeFurnitureFromHouse(currentState, houseId, itemId));
   };
 
   const handleBiomeComplete = (payload) => {
@@ -1455,6 +1477,7 @@ const App = () => {
           onBack={openBuilderWorld}
           onAddFurniture={handleBuilderAddFurniture}
           onMoveFurniture={handleBuilderMoveFurniture}
+          onRemoveFurniture={handleBuilderRemoveFurniture}
         />
       )}
 

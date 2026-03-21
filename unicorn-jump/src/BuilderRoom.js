@@ -43,20 +43,26 @@ const getRoomLayoutMode = () => {
     return {
       compact: false,
       stacked: false,
+      viewportWidth: 1440,
+      viewportHeight: 900,
     };
   }
 
   const width = Math.round(window.visualViewport?.width ?? window.innerWidth);
+  const height = Math.round(window.visualViewport?.height ?? window.innerHeight);
   return {
     compact: width <= 980,
     stacked: width <= 1180,
+    viewportWidth: width,
+    viewportHeight: height,
   };
 };
 
 const getRoomDropState = (roomElement, furniture, pointerOffset, clientX, clientY) => {
   const bounds = roomElement.getBoundingClientRect();
-  const rawX = clientX - bounds.left - pointerOffset.x;
-  const rawY = clientY - bounds.top - pointerOffset.y;
+  const scale = bounds.width > 0 && roomElement.clientWidth > 0 ? bounds.width / roomElement.clientWidth : 1;
+  const rawX = (clientX - bounds.left) / scale - pointerOffset.x;
+  const rawY = (clientY - bounds.top) / scale - pointerOffset.y;
 
   return {
     insideRoom:
@@ -76,6 +82,316 @@ const getRoomDropState = (roomElement, furniture, pointerOffset, clientX, client
       }
     ),
   };
+};
+
+const isPointerInsideBounds = (element, clientX, clientY) => {
+  if (!element) {
+    return false;
+  }
+
+  const bounds = element.getBoundingClientRect();
+  return (
+    clientX >= bounds.left &&
+    clientX <= bounds.right &&
+    clientY >= bounds.top &&
+    clientY <= bounds.bottom
+  );
+};
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const getRoomPanelWidth = (layoutMode) => {
+  const gutter = layoutMode.compact ? 12 : 18;
+  return Math.max(320, Math.min(layoutMode.viewportWidth - gutter, 1760));
+};
+
+const getRoomStageScale = (roomWidth, roomHeight, layoutMode) => {
+  const panelWidth = getRoomPanelWidth(layoutMode);
+  const horizontalPadding = layoutMode.compact ? 28 : 56;
+  const sideColumnWidth = layoutMode.stacked ? 0 : 272;
+  const sideColumnGap = layoutMode.stacked ? 0 : 18;
+  const roomColumnWidth = panelWidth - horizontalPadding - sideColumnWidth - sideColumnGap;
+  const heightBudget = layoutMode.viewportHeight - (layoutMode.compact ? 360 : 250);
+  const widthScale = roomColumnWidth / roomWidth;
+  const heightScale = heightBudget / roomHeight;
+  const maxScale = layoutMode.compact ? 1.2 : layoutMode.stacked ? 1.52 : 2.08;
+
+  return clamp(Math.min(widthScale, heightScale, maxScale), 0.56, maxScale);
+};
+
+const ROOM_UNICORN_ASSET = `${process.env.PUBLIC_URL}/assets/images/character/unicorn_little.svg`;
+const PLAYER_ACTOR_SIZE = {
+  width: 46,
+  height: 46,
+  speed: 156,
+};
+const NPC_ACTOR_SIZE = {
+  width: 34,
+  height: 42,
+};
+
+const getRoomWalkBounds = (roomWidth, roomHeight, actorWidth, actorHeight) => ({
+  xMin: 12,
+  xMax: Math.max(12, roomWidth - actorWidth - 12),
+  yMin: Math.round(roomHeight * 0.58),
+  yMax: Math.max(Math.round(roomHeight * 0.58), roomHeight - actorHeight - 18),
+});
+
+const createRoomNpcBlueprints = (theme) => [
+  {
+    id: 'npc-guide',
+    name: 'Guide',
+    bodyColor: theme?.accent || '#f4b457',
+    accentColor: theme?.frame || '#34435a',
+    glowColor: 'rgba(255,255,255,0.18)',
+    anchor: 0.28,
+    range: 0.16,
+    lane: 0.16,
+    phase: 0.15,
+    periodMs: 3600,
+  },
+  {
+    id: 'npc-friend',
+    name: 'Room Friend',
+    bodyColor: theme?.wallBottom || '#d2dccf',
+    accentColor: theme?.accent || '#85f1ff',
+    glowColor: 'rgba(255,255,255,0.12)',
+    anchor: 0.72,
+    range: 0.14,
+    lane: 0.02,
+    phase: 1.25,
+    periodMs: 4200,
+  },
+];
+
+const createInitialRoomRuntime = (roomWidth, roomHeight) => {
+  const walkBounds = getRoomWalkBounds(
+    roomWidth,
+    roomHeight,
+    PLAYER_ACTOR_SIZE.width,
+    PLAYER_ACTOR_SIZE.height
+  );
+  const x = clamp(Math.round(roomWidth * 0.18), walkBounds.xMin, walkBounds.xMax);
+  const y = clamp(
+    Math.round(walkBounds.yMin + (walkBounds.yMax - walkBounds.yMin) * 0.38),
+    walkBounds.yMin,
+    walkBounds.yMax
+  );
+
+  return {
+    timeMs: 0,
+    player: {
+      name: 'Little Unicorn',
+      x,
+      y,
+      targetX: x,
+      targetY: y,
+      width: PLAYER_ACTOR_SIZE.width,
+      height: PLAYER_ACTOR_SIZE.height,
+      speed: PLAYER_ACTOR_SIZE.speed,
+      facing: 1,
+    },
+  };
+};
+
+const advanceRoomPlayer = (player, ms, roomWidth, roomHeight) => {
+  if (!player) {
+    return player;
+  }
+
+  const walkBounds = getRoomWalkBounds(roomWidth, roomHeight, player.width, player.height);
+  const nextTargetX = clamp(player.targetX, walkBounds.xMin, walkBounds.xMax);
+  const nextTargetY = clamp(player.targetY, walkBounds.yMin, walkBounds.yMax);
+  const dx = nextTargetX - player.x;
+  const dy = nextTargetY - player.y;
+  const distance = Math.hypot(dx, dy);
+
+  if (distance < 0.5) {
+    return {
+      ...player,
+      x: nextTargetX,
+      y: nextTargetY,
+    };
+  }
+
+  const stepDistance = (player.speed ?? PLAYER_ACTOR_SIZE.speed) * (ms / 1000);
+  if (distance <= stepDistance) {
+    return {
+      ...player,
+      x: nextTargetX,
+      y: nextTargetY,
+      facing: dx < 0 ? -1 : dx > 0 ? 1 : player.facing,
+    };
+  }
+
+  return {
+    ...player,
+    x: player.x + (dx / distance) * stepDistance,
+    y: player.y + (dy / distance) * stepDistance,
+    facing: dx < -0.5 ? -1 : dx > 0.5 ? 1 : player.facing,
+  };
+};
+
+const advanceRoomRuntime = (runtime, ms, roomWidth, roomHeight) => ({
+  ...runtime,
+  timeMs: runtime.timeMs + ms,
+  player: advanceRoomPlayer(runtime.player, ms, roomWidth, roomHeight),
+});
+
+const getNpcActors = (roomTheme, roomWidth, roomHeight, timeMs) => {
+  const walkBounds = getRoomWalkBounds(
+    roomWidth,
+    roomHeight,
+    NPC_ACTOR_SIZE.width,
+    NPC_ACTOR_SIZE.height
+  );
+  const spanX = Math.max(1, walkBounds.xMax - walkBounds.xMin);
+  const spanY = Math.max(1, walkBounds.yMax - walkBounds.yMin);
+
+  return createRoomNpcBlueprints(roomTheme).map((npc) => {
+    const angle = (timeMs / npc.periodMs) * Math.PI * 2 + npc.phase;
+    const x = clamp(
+      walkBounds.xMin + spanX * npc.anchor + Math.sin(angle) * spanX * npc.range,
+      walkBounds.xMin,
+      walkBounds.xMax
+    );
+    const y = clamp(
+      walkBounds.yMin + spanY * npc.lane + Math.sin(angle * 1.7) * 3.5,
+      walkBounds.yMin,
+      walkBounds.yMax
+    );
+
+    return {
+      ...npc,
+      x,
+      y,
+      width: NPC_ACTOR_SIZE.width,
+      height: NPC_ACTOR_SIZE.height,
+      facing: Math.cos(angle) >= 0 ? 1 : -1,
+      bobOffset: Math.sin(angle * 2.1) * 2.4,
+    };
+  });
+};
+
+const buildRoomRuntimeSnapshot = (runtime, roomTheme, roomWidth, roomHeight) => ({
+  timeMs: runtime.timeMs,
+  player: runtime.player
+    ? {
+        name: runtime.player.name,
+        x: Math.round(runtime.player.x),
+        y: Math.round(runtime.player.y),
+        targetX: Math.round(runtime.player.targetX),
+        targetY: Math.round(runtime.player.targetY),
+        width: runtime.player.width,
+        height: runtime.player.height,
+        facing: runtime.player.facing,
+      }
+    : null,
+  npcs: getNpcActors(roomTheme, roomWidth, roomHeight, runtime.timeMs).map((npc) => ({
+    id: npc.id,
+    name: npc.name,
+    x: Math.round(npc.x),
+    y: Math.round(npc.y),
+    width: npc.width,
+    height: npc.height,
+    facing: npc.facing,
+  })),
+});
+
+const UnicornActorArt = ({ actor, timeMs }) => {
+  const moving =
+    Math.abs(actor.targetX - actor.x) > 1 || Math.abs(actor.targetY - actor.y) > 1;
+  const bobOffset = Math.sin(timeMs / (moving ? 90 : 180)) * (moving ? 2.8 : 1.6);
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          left: '18%',
+          right: '18%',
+          bottom: '2%',
+          height: '16%',
+          borderRadius: '50%',
+          background: 'rgba(47, 64, 91, 0.16)',
+          filter: 'blur(3px)',
+        }}
+      />
+      <img
+        src={ROOM_UNICORN_ASSET}
+        alt=""
+        draggable={false}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+          transform: `translateY(${bobOffset}px) scaleX(${actor.facing < 0 ? -1 : 1})`,
+          transformOrigin: 'center center',
+          filter: 'drop-shadow(0 8px 12px rgba(15, 23, 42, 0.18))',
+          userSelect: 'none',
+          WebkitUserDrag: 'none',
+          pointerEvents: 'none',
+        }}
+      />
+    </div>
+  );
+};
+
+const RoomNpcArt = ({ actor, timeMs }) => {
+  const blink = Math.sin(timeMs / 420 + actor.phase) > 0.94;
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        transform: `translateY(${actor.bobOffset}px) scaleX(${actor.facing < 0 ? -1 : 1})`,
+        transformOrigin: 'center center',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          left: '18%',
+          right: '18%',
+          bottom: '4%',
+          height: '12%',
+          borderRadius: '50%',
+          background: 'rgba(15, 23, 42, 0.12)',
+          filter: 'blur(2px)',
+        }}
+      />
+      <svg
+        viewBox="0 0 60 72"
+        width="100%"
+        height="100%"
+        style={{
+          display: 'block',
+          overflow: 'visible',
+          filter: 'drop-shadow(0 6px 8px rgba(15, 23, 42, 0.12))',
+        }}
+      >
+        <circle cx="30" cy="18" r="11" fill="#fff7ef" stroke={actor.accentColor} strokeWidth="3" />
+        <path d="M18 34 Q30 26 42 34 L46 58 Q30 68 14 58 Z" fill={actor.bodyColor} stroke={actor.accentColor} strokeWidth="3" />
+        <path d="M24 12 Q30 4 36 12" fill="none" stroke={actor.accentColor} strokeWidth="3" strokeLinecap="round" />
+        <circle cx="26" cy="18" r="1.8" fill={actor.accentColor} opacity={blink ? 0.2 : 1} />
+        <circle cx="34" cy="18" r="1.8" fill={actor.accentColor} opacity={blink ? 0.2 : 1} />
+        <path d="M25 23 Q30 27 35 23" fill="none" stroke={actor.accentColor} strokeWidth="2.5" strokeLinecap="round" />
+        <rect x="23" y="58" width="5" height="10" rx="2.5" fill={actor.accentColor} />
+        <rect x="32" y="58" width="5" height="10" rx="2.5" fill={actor.accentColor} />
+        <circle cx="45" cy="24" r="4" fill={actor.glowColor} opacity="0.86" />
+      </svg>
+    </div>
+  );
 };
 
 const FurnitureArt = ({ item, ghost = false }) => {
@@ -584,33 +900,67 @@ const RoomThemeScene = ({ theme }) => {
   if (theme.id === 'korean-garden') {
     return (
       <>
-        <div style={shape({ right: '12%', top: '12%', width: 104, height: 104, borderRadius: '50%', border: `8px solid ${theme.frame}`, background: 'rgba(255,255,255,0.25)' })} />
-        <div style={shape({ left: '8%', top: '16%', width: 126, height: 64, background: theme.wallTop, border: `4px solid ${theme.frame}`, borderRadius: '18px 18px 10px 10px' })} />
-        <div style={shape({ left: '6%', top: '10%', width: 138, height: 34, clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)', background: theme.frame })} />
-        {[14, 20, 26].map((offset, index) => (
+        {[10, 28, 48, 70].map((left, index) => (
+          <div
+            key={`mountain-${left}`}
+            style={shape({
+              left: `${left}%`,
+              top: `${12 + (index % 2) * 2}%`,
+              width: 148,
+              height: 96,
+              transform: 'translateX(-50%)',
+              clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)',
+              background: index % 2 === 0 ? 'rgba(87, 125, 116, 0.22)' : 'rgba(106, 145, 133, 0.18)',
+            })}
+          />
+        ))}
+        <div style={shape({ right: '8%', top: '10%', width: 136, height: 136, borderRadius: '50%', border: `10px solid ${theme.frame}`, background: 'rgba(255,255,255,0.28)', boxShadow: '0 0 0 14px rgba(255,255,255,0.08)' })} />
+        <div style={shape({ left: '5%', top: '15%', width: 196, height: 120, borderRadius: '26px 26px 12px 12px', background: 'linear-gradient(180deg, #edf3ed, #c6d3c2)', border: `5px solid ${theme.frame}` })} />
+        <div style={shape({ left: '2%', top: '8%', width: 214, height: 42, clipPath: 'polygon(8% 100%, 50% 0%, 92% 100%, 100% 100%, 96% 68%, 4% 68%, 0% 100%)', background: theme.frame })} />
+        {[18, 28, 76, 84].map((offset, index) => (
           <div
             key={`bamboo-${offset}`}
             style={shape({
               left: `${offset}%`,
-              top: `${22 + index * 3}%`,
+              top: `${18 + (index % 2) * 4}%`,
               width: 14,
-              height: 116,
+              height: 148,
               borderRadius: 999,
-              background: index === 1 ? '#75b78c' : '#5f9a79',
+              background: index < 2 ? '#6cab81' : '#578f75',
+              boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.14)',
             })}
           />
         ))}
-        <div style={shape({ right: '10%', bottom: '12%', width: 146, height: 64, borderRadius: '50%', background: 'rgba(106, 175, 196, 0.34)' })} />
+        {[16, 26, 74, 86].map((offset, index) => (
+          <div
+            key={`lantern-${offset}`}
+            style={shape({
+              left: `${offset}%`,
+              top: `${18 + (index % 2) * 5}%`,
+              width: 22,
+              height: 34,
+              borderRadius: '14px 14px 10px 10px',
+              background: 'linear-gradient(180deg, #fff5bf, #f4b457)',
+              border: `3px solid ${theme.frame}`,
+              boxShadow: '0 0 22px rgba(244, 180, 87, 0.28)',
+            })}
+          />
+        ))}
+        <div style={shape({ left: '20%', right: '20%', bottom: '24%', height: 10, borderRadius: 999, background: '#84644d' })} />
+        {[24, 34, 44, 54, 64, 74].map((left) => (
+          <div key={`rail-${left}`} style={shape({ left: `${left}%`, bottom: '20%', width: 8, height: 34, borderRadius: 999, background: '#84644d' })} />
+        ))}
+        <div style={shape({ right: '8%', bottom: '10%', width: 184, height: 96, borderRadius: '50%', background: 'radial-gradient(circle at 50% 35%, rgba(180, 245, 255, 0.46) 0%, rgba(109, 186, 202, 0.24) 56%, rgba(109, 186, 202, 0.12) 100%)' })} />
         {[0, 1, 2].map((index) => (
           <div
             key={`stone-${index}`}
             style={shape({
-              left: `${40 + index * 7}%`,
-              bottom: `${10 + (index % 2) * 4}%`,
+              left: `${46 + index * 8}%`,
+              bottom: `${12 + (index % 2) * 4}%`,
               width: 42,
-              height: 20,
+              height: 22,
               borderRadius: 999,
-              background: 'rgba(255,255,255,0.58)',
+              background: 'rgba(255,255,255,0.62)',
             })}
           />
         ))}
@@ -621,17 +971,38 @@ const RoomThemeScene = ({ theme }) => {
   if (theme.id === 'bavarian-castle') {
     return (
       <>
-        {[14, 74].map((left) => (
-          <div key={`tower-${left}`} style={shape({ left: `${left}%`, top: '12%', width: 62, height: 148, borderRadius: 16, background: '#f7efe6', border: `4px solid ${theme.frame}` })}>
-            <div style={shape({ left: -4, top: -28, width: 70, height: 34, clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)', background: theme.frame })} />
+        {[18, 36, 54, 72].map((left, index) => (
+          <div
+            key={`alp-${left}`}
+            style={shape({
+              left: `${left}%`,
+              top: `${14 + (index % 2) * 3}%`,
+              width: 154,
+              height: 102,
+              transform: 'translateX(-50%)',
+              clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)',
+              background: index % 2 === 0 ? 'rgba(117, 131, 176, 0.2)' : 'rgba(92, 108, 155, 0.16)',
+            })}
+          />
+        ))}
+        {[10, 80].map((left) => (
+          <div key={`tower-${left}`} style={shape({ left: `${left}%`, top: '10%', width: 82, height: 176, borderRadius: 22, background: 'linear-gradient(180deg, #fbf2ea, #d8c0b0)', border: `5px solid ${theme.frame}` })}>
+            <div style={shape({ left: -8, top: -36, width: 96, height: 44, clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)', background: theme.frame })} />
+            <div style={shape({ left: 12, top: 24, width: 54, height: 16, borderRadius: 999, background: '#efe3d8' })} />
           </div>
         ))}
-        {[24, 44, 64].map((left) => (
-          <div key={`window-${left}`} style={shape({ left: `${left}%`, top: '26%', width: 42, height: 78, borderRadius: '20px 20px 12px 12px', background: 'rgba(219, 234, 254, 0.8)', border: `4px solid ${theme.trim || theme.frame}` })} />
+        <div style={shape({ left: '16%', right: '16%', top: '18%', height: 146, borderRadius: '26px 26px 12px 12px', background: 'linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.12))', border: `5px solid ${theme.frame}` })} />
+        {[24, 42, 58, 76].map((left) => (
+          <div key={`window-${left}`} style={shape({ left: `${left}%`, top: '22%', width: 56, height: 108, borderRadius: '28px 28px 14px 14px', background: 'linear-gradient(180deg, rgba(219, 234, 254, 0.9), rgba(179, 201, 242, 0.68))', border: `5px solid ${theme.frame}` })} />
         ))}
-        {[28, 60].map((left) => (
-          <div key={`banner-${left}`} style={shape({ left: `${left}%`, top: '18%', width: 26, height: 82, borderRadius: 16, background: theme.accent, clipPath: 'polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%)' })} />
+        {[30, 50, 68].map((left) => (
+          <div key={`banner-${left}`} style={shape({ left: `${left}%`, top: '14%', width: 30, height: 102, borderRadius: 18, background: `linear-gradient(180deg, ${theme.accent}, #8e3056)`, clipPath: 'polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%)' })} />
         ))}
+        <div style={shape({ left: '24%', right: '24%', bottom: '22%', height: 16, borderRadius: 999, background: '#8b6851' })} />
+        {[28, 38, 48, 58, 68].map((left) => (
+          <div key={`baluster-${left}`} style={shape({ left: `${left}%`, bottom: '18%', width: 10, height: 44, borderRadius: 999, background: '#8b6851' })} />
+        ))}
+        <div style={shape({ left: '50%', top: '12%', transform: 'translateX(-50%)', width: 84, height: 42, borderRadius: '0 0 28px 28px', background: 'linear-gradient(180deg, #f6d58f, #d9a85c)', boxShadow: '0 0 28px rgba(247, 210, 129, 0.26)' })} />
       </>
     );
   }
@@ -639,12 +1010,30 @@ const RoomThemeScene = ({ theme }) => {
   if (theme.id === 'spanish-palace') {
     return (
       <>
-        {[10, 38, 66].map((left) => (
-          <div key={`arch-${left}`} style={shape({ left: `${left}%`, top: '16%', width: 82, height: 128, borderRadius: '44px 44px 18px 18px', border: `5px solid ${theme.frame}`, background: 'rgba(255,255,255,0.3)' })} />
+        {[18, 40, 62, 84].map((left, index) => (
+          <div
+            key={`palm-${left}`}
+            style={shape({
+              left: `${left}%`,
+              top: `${16 + (index % 2) * 3}%`,
+              width: 8,
+              height: 86,
+              background: 'rgba(132, 101, 52, 0.2)',
+              borderRadius: 999,
+              transform: 'translateX(-50%) rotate(8deg)',
+            })}
+          />
         ))}
-        <div style={shape({ left: '50%', bottom: '18%', transform: 'translateX(-50%)', width: 86, height: 86, borderRadius: '50%', background: 'rgba(28, 154, 183, 0.2)', border: `6px solid ${theme.accent}` })} />
-        <div style={shape({ left: '50%', bottom: '38%', transform: 'translateX(-50%)', width: 18, height: 42, borderRadius: 999, background: '#ffffff' })} />
-        <div style={shape({ left: 0, right: 0, bottom: '9%', height: 22, background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.25) 0 18px, rgba(28, 154, 183, 0.34) 18px 36px, rgba(194,104,69,0.22) 36px 54px)' })} />
+        {[8, 32, 56, 80].map((left) => (
+          <div key={`arch-${left}`} style={shape({ left: `${left}%`, top: '14%', width: 106, height: 146, borderRadius: '56px 56px 18px 18px', border: `6px solid ${theme.frame}`, background: 'linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0.12))' })} />
+        ))}
+        {[10, 34, 58, 82].map((left) => (
+          <div key={`lamp-${left}`} style={shape({ left: `${left}%`, top: '10%', width: 18, height: 28, borderRadius: '12px 12px 10px 10px', background: 'linear-gradient(180deg, #fff6c3, #f7bc62)', border: `3px solid ${theme.frame}`, boxShadow: '0 0 18px rgba(247, 188, 98, 0.28)' })} />
+        ))}
+        <div style={shape({ left: '50%', bottom: '16%', transform: 'translateX(-50%)', width: 114, height: 114, borderRadius: '50%', background: 'radial-gradient(circle at 50% 40%, rgba(147, 232, 255, 0.4) 0%, rgba(28,154,183,0.18) 60%, rgba(28,154,183,0.08) 100%)', border: `6px solid ${theme.accent}` })} />
+        <div style={shape({ left: '50%', bottom: '40%', transform: 'translateX(-50%)', width: 22, height: 54, borderRadius: 999, background: '#ffffff' })} />
+        <div style={shape({ left: '50%', bottom: '51%', transform: 'translateX(-50%)', width: 66, height: 18, borderRadius: 999, background: 'rgba(255,255,255,0.76)' })} />
+        <div style={shape({ left: 0, right: 0, bottom: '8%', height: 28, background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.24) 0 18px, rgba(28,154,183,0.28) 18px 36px, rgba(194,104,69,0.22) 36px 54px, rgba(255,255,255,0.24) 54px 72px)' })} />
       </>
     );
   }
@@ -652,25 +1041,44 @@ const RoomThemeScene = ({ theme }) => {
   if (theme.id === 'mesoamerican-pyramid') {
     return (
       <>
-        <div style={shape({ left: '50%', top: '18%', transform: 'translateX(-50%)', width: 180, height: 150, clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)', background: 'rgba(124, 83, 46, 0.22)' })} />
-        {[0, 1, 2, 3].map((step) => (
+        {[18, 34, 50, 66, 82].map((left, index) => (
           <div
-            key={`step-${step}`}
+            key={`canopy-${left}`}
             style={shape({
-              left: `${26 + step * 4}%`,
-              top: `${46 + step * 6}%`,
-              width: `${48 - step * 8}%`,
-              height: 18,
-              background: step % 2 === 0 ? '#cf9b63' : '#b88350',
-              border: `2px solid ${theme.frame}`,
+              left: `${left}%`,
+              top: `${14 + (index % 2) * 2}%`,
+              width: 96,
+              height: 58,
+              transform: 'translateX(-50%)',
+              clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)',
+              background: index % 2 === 0 ? 'rgba(92, 128, 71, 0.12)' : 'rgba(63, 102, 55, 0.12)',
             })}
           />
         ))}
-        <div style={shape({ left: '50%', top: '8%', transform: 'translateX(-50%)', width: 74, height: 74, borderRadius: '50%', background: 'rgba(255, 223, 107, 0.55)' })} />
+        <div style={shape({ left: '50%', top: '12%', transform: 'translateX(-50%)', width: 236, height: 182, clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)', background: 'rgba(124, 83, 46, 0.24)' })} />
+        <div style={shape({ left: '50%', top: '18%', transform: 'translateX(-50%)', width: 198, height: 160, clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)', background: 'linear-gradient(180deg, #cda16f, #936039)' })} />
+        {[0, 1, 2, 3, 4].map((step) => (
+          <div
+            key={`step-${step}`}
+            style={shape({
+              left: `${22 + step * 5}%`,
+              top: `${46 + step * 7}%`,
+              width: `${56 - step * 9}%`,
+              height: 22,
+              background: step % 2 === 0 ? '#d4a26b' : '#b77c49',
+              border: `3px solid ${theme.frame}`,
+            })}
+          />
+        ))}
+        <div style={shape({ left: '50%', top: '7%', transform: 'translateX(-50%)', width: 96, height: 96, borderRadius: '50%', background: 'radial-gradient(circle at 50% 50%, rgba(255, 238, 163, 0.95) 0%, rgba(255, 223, 107, 0.78) 56%, rgba(255, 223, 107, 0.18) 100%)' })} />
+        <div style={shape({ left: '50%', top: '22%', transform: 'translateX(-50%)', width: 48, height: 24, background: '#6d452b', borderRadius: 8 })} />
         {[18, 76].map((left) => (
-          <div key={`torch-${left}`} style={shape({ left: `${left}%`, bottom: '18%', width: 18, height: 70, borderRadius: 999, background: theme.frame })}>
-            <div style={shape({ left: -8, top: -16, width: 34, height: 26, borderRadius: '50% 50% 45% 45%', background: theme.accent })} />
+          <div key={`torch-${left}`} style={shape({ left: `${left}%`, bottom: '18%', width: 18, height: 86, borderRadius: 999, background: theme.frame })}>
+            <div style={shape({ left: -10, top: -22, width: 38, height: 30, borderRadius: '50% 50% 45% 45%', background: 'radial-gradient(circle at 50% 18%, #fff7cc 0%, #ffdf6b 58%, #f59e0b 100%)', boxShadow: '0 0 18px rgba(255, 223, 107, 0.26)' })} />
           </div>
+        ))}
+        {[18, 34, 50, 66, 82].map((left) => (
+          <div key={`glyph-${left}`} style={shape({ left: `${left}%`, bottom: '8%', width: 34, height: 20, borderRadius: 6, background: 'rgba(111, 69, 44, 0.24)', border: `2px solid rgba(111, 69, 44, 0.28)` })} />
         ))}
       </>
     );
@@ -679,12 +1087,20 @@ const RoomThemeScene = ({ theme }) => {
   if (theme.id === 'grecoroman-circus') {
     return (
       <>
-        {[12, 30, 48, 66, 84].map((left) => (
-          <div key={`column-${left}`} style={shape({ left: `${left}%`, top: '20%', width: 22, height: 134, borderRadius: 999, background: '#f6efe4', border: `3px solid ${theme.frame}` })} />
+        <div style={shape({ left: '10%', right: '10%', top: '12%', height: 34, borderRadius: 999, background: 'rgba(255,255,255,0.3)' })} />
+        {[10, 26, 42, 58, 74, 90].map((left) => (
+          <div key={`column-${left}`} style={shape({ left: `${left}%`, top: '16%', width: 26, height: 148, borderRadius: 999, background: '#f7efe5', border: `3px solid ${theme.frame}` })} />
         ))}
-        <div style={shape({ left: '50%', bottom: '16%', transform: 'translateX(-50%)', width: '78%', height: 88, borderRadius: '50%', background: 'rgba(214, 85, 110, 0.14)', border: `4px solid ${theme.accent}` })} />
-        {[16, 28, 40, 52, 64, 76].map((left) => (
-          <div key={`garland-${left}`} style={shape({ left: `${left}%`, top: '11%', width: 24, height: 34, background: left % 24 === 16 ? theme.accent : theme.frame, clipPath: 'polygon(0 0, 100% 0, 50% 100%)' })} />
+        {[16, 32, 48, 64, 80].map((left) => (
+          <div key={`arch-${left}`} style={shape({ left: `${left}%`, top: '14%', width: 74, height: 108, borderRadius: '38px 38px 12px 12px', background: 'rgba(255,255,255,0.18)', border: `4px solid rgba(255,255,255,0.26)` })} />
+        ))}
+        <div style={shape({ left: '50%', bottom: '18%', transform: 'translateX(-50%)', width: '82%', height: 108, borderRadius: '50%', background: 'radial-gradient(circle at 50% 50%, rgba(214, 85, 110, 0.16) 0%, rgba(214, 85, 110, 0.08) 62%, rgba(255,255,255,0) 100%)', border: `5px solid ${theme.accent}` })} />
+        <div style={shape({ left: '50%', bottom: '24%', transform: 'translateX(-50%)', width: '56%', height: 42, borderRadius: 999, background: 'rgba(255,255,255,0.28)' })} />
+        {[14, 26, 38, 50, 62, 74, 86].map((left) => (
+          <div key={`garland-${left}`} style={shape({ left: `${left}%`, top: '9%', width: 28, height: 38, background: left % 24 === 14 ? theme.accent : theme.frame, clipPath: 'polygon(0 0, 100% 0, 50% 100%)' })} />
+        ))}
+        {[22, 50, 78].map((left) => (
+          <div key={`banner-${left}`} style={shape({ left: `${left}%`, top: '14%', width: 24, height: 86, borderRadius: 16, background: `linear-gradient(180deg, ${theme.accent}, #8f3c4f)`, clipPath: 'polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%)' })} />
         ))}
       </>
     );
@@ -693,17 +1109,24 @@ const RoomThemeScene = ({ theme }) => {
   if (theme.id === 'scandinavian-longhouse') {
     return (
       <>
-        {[18, 36, 54, 72].map((left) => (
-          <div key={`beam-${left}`} style={shape({ left: `${left}%`, top: '10%', width: 18, height: '72%', borderRadius: 999, background: theme.frame, opacity: 0.9 })} />
+        {[12, 28, 44, 60, 76, 92].map((left) => (
+          <div key={`beam-${left}`} style={shape({ left: `${left}%`, top: '8%', width: 20, height: '76%', borderRadius: 999, background: theme.frame, opacity: 0.92 })} />
         ))}
-        {[14, 34, 54, 74].map((left) => (
-          <div key={`rafter-${left}`} style={shape({ left: `${left}%`, top: '6%', width: 86, height: 14, transform: 'rotate(32deg)', transformOrigin: 'left center', background: theme.frame, borderRadius: 999 })} />
+        {[8, 24, 40, 56, 72].map((left) => (
+          <div key={`rafter-left-${left}`} style={shape({ left: `${left}%`, top: '5%', width: 102, height: 16, transform: 'rotate(34deg)', transformOrigin: 'left center', background: theme.frame, borderRadius: 999 })} />
         ))}
-        <div style={shape({ left: '50%', bottom: '16%', transform: 'translateX(-50%)', width: 112, height: 112, borderRadius: '50%', background: 'rgba(242, 153, 74, 0.18)' })} />
-        <div style={shape({ left: '50%', bottom: '24%', transform: 'translateX(-50%)', width: 64, height: 64, borderRadius: '50%', background: theme.accent, opacity: 0.55 })} />
+        {[20, 36, 52, 68, 84].map((left) => (
+          <div key={`rafter-right-${left}`} style={shape({ left: `${left}%`, top: '5%', width: 102, height: 16, transform: 'rotate(-34deg)', transformOrigin: 'right center', background: theme.frame, borderRadius: 999 })} />
+        ))}
+        {[14, 44, 74].map((left) => (
+          <div key={`window-${left}`} style={shape({ left: `${left}%`, top: '20%', width: 84, height: 74, borderRadius: 18, background: 'linear-gradient(180deg, rgba(226, 241, 251, 0.82), rgba(186, 209, 230, 0.55))', border: `4px solid #5e4635` })} />
+        ))}
+        <div style={shape({ left: '50%', bottom: '14%', transform: 'translateX(-50%)', width: 156, height: 156, borderRadius: '50%', background: 'radial-gradient(circle at 50% 50%, rgba(242, 153, 74, 0.24) 0%, rgba(242, 153, 74, 0.08) 62%, rgba(255,255,255,0) 100%)' })} />
+        <div style={shape({ left: '50%', bottom: '24%', transform: 'translateX(-50%)', width: 82, height: 82, borderRadius: '50%', background: theme.accent, opacity: 0.55 })} />
         {[24, 68].map((left) => (
-          <div key={`shield-${left}`} style={shape({ left: `${left}%`, top: '24%', width: 52, height: 52, borderRadius: '50%', background: '#d7c0a3', border: `4px solid ${theme.frame}` })} />
+          <div key={`shield-${left}`} style={shape({ left: `${left}%`, top: '22%', width: 60, height: 60, borderRadius: '50%', background: '#d8c0a2', border: `4px solid ${theme.frame}` })} />
         ))}
+        <div style={shape({ left: '50%', top: '18%', transform: 'translateX(-50%)', width: 78, height: 20, borderRadius: 999, background: '#caa36d' })} />
       </>
     );
   }
@@ -711,17 +1134,40 @@ const RoomThemeScene = ({ theme }) => {
   if (theme.id === 'japanese-fortress') {
     return (
       <>
-        <div style={shape({ left: 0, right: 0, top: '10%', height: 26, background: theme.frame })} />
-        <div style={shape({ left: '8%', right: '8%', top: '18%', height: 124, borderRadius: 16, background: 'rgba(255,255,255,0.22)', border: `4px solid ${theme.frame}` })} />
-        {[18, 38, 58, 78].map((left) => (
-          <div key={`shoji-${left}`} style={shape({ left: `${left}%`, top: '21%', width: 2, height: 112, background: theme.frame, opacity: 0.55 })} />
+        {[18, 34, 52, 70, 86].map((left, index) => (
+          <div
+            key={`roof-${left}`}
+            style={shape({
+              left: `${left}%`,
+              top: `${10 + (index % 2) * 5}%`,
+              width: 110,
+              height: 62,
+              transform: 'translateX(-50%)',
+              clipPath: 'polygon(14% 100%, 0 54%, 50% 0, 100% 54%, 86% 100%)',
+              background: index === 2 ? 'rgba(47, 64, 91, 0.32)' : 'rgba(47, 64, 91, 0.2)',
+            })}
+          />
         ))}
-        {[30, 50, 70].map((top) => (
-          <div key={`shoji-row-${top}`} style={shape({ left: '10%', right: '10%', top: `${top}%`, height: 2, background: theme.frame, opacity: 0.42 })} />
+        <div style={shape({ left: '78%', top: '10%', width: 90, height: 90, borderRadius: '50%', background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.28) 48%, rgba(255,255,255,0) 100%)' })} />
+        <div style={shape({ left: 0, right: 0, top: '10%', height: 28, background: theme.frame })} />
+        <div style={shape({ left: '6%', right: '6%', top: '18%', height: 144, borderRadius: 18, background: 'linear-gradient(180deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08))', border: `5px solid ${theme.frame}` })} />
+        {[12, 30, 48, 66, 84].map((left) => (
+          <div key={`shoji-${left}`} style={shape({ left: `${left}%`, top: '20%', width: 2, height: 126, background: theme.frame, opacity: 0.55 })} />
         ))}
-        <div style={shape({ left: '18%', bottom: '16%', width: 112, height: 12, borderRadius: 999, background: '#8f7357' })} />
-        <div style={shape({ left: '18%', bottom: '18%', width: 12, height: 52, borderRadius: 999, background: '#8f7357' })} />
-        <div style={shape({ left: '46%', bottom: '12%', width: 124, height: 44, borderRadius: '50%', background: 'rgba(245, 138, 172, 0.14)' })} />
+        {[28, 46, 64, 82].map((top) => (
+          <div key={`shoji-row-${top}`} style={shape({ left: '8%', right: '8%', top: `${top}%`, height: 2, background: theme.frame, opacity: 0.38 })} />
+        ))}
+        <div style={shape({ left: '12%', bottom: '16%', width: 154, height: 14, borderRadius: 999, background: '#8f7357' })} />
+        {[16, 36, 56].map((left) => (
+          <div key={`bridge-post-${left}`} style={shape({ left: `${left}%`, bottom: '16%', width: 12, height: 58, borderRadius: 999, background: '#8f7357' })} />
+        ))}
+        <div style={shape({ left: '46%', bottom: '10%', width: 150, height: 48, borderRadius: '50%', background: 'rgba(245, 138, 172, 0.16)' })} />
+        {[62, 68, 74, 80].map((left, index) => (
+          <div key={`blossom-${left}`} style={shape({ left: `${left}%`, top: `${24 + (index % 2) * 6}%`, width: 22, height: 22, borderRadius: '50%', background: index % 2 === 0 ? '#ffd5e3' : '#f58aac' })} />
+        ))}
+        {[14, 84].map((left) => (
+          <div key={`lantern-${left}`} style={shape({ left: `${left}%`, top: '18%', width: 20, height: 34, borderRadius: '12px 12px 10px 10px', background: 'linear-gradient(180deg, #fff1d2, #f5c17e)', border: `3px solid ${theme.frame}`, boxShadow: '0 0 18px rgba(245, 193, 126, 0.22)' })} />
+        ))}
       </>
     );
   }
@@ -729,18 +1175,22 @@ const RoomThemeScene = ({ theme }) => {
   if (theme.id === 'babylonian-hanging-gardens') {
     return (
       <>
-        {[8, 34, 60].map((left, index) => (
-          <div key={`terrace-${left}`} style={shape({ left: `${left}%`, top: `${14 + index * 7}%`, width: 94, height: 108, borderRadius: '18px 18px 12px 12px', background: index === 1 ? '#c6a46e' : '#b88d58', border: `4px solid ${theme.frame}` })} />
+        {[10, 36, 62].map((left, index) => (
+          <div key={`arch-${left}`} style={shape({ left: `${left}%`, top: `${14 + index * 4}%`, width: 122, height: 148, borderRadius: '28px 28px 14px 14px', background: index === 1 ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.12)', border: `5px solid ${theme.frame}` })} />
         ))}
-        {[14, 40, 66].map((left) => (
-          <div key={`vine-${left}`} style={shape({ left: `${left}%`, top: '16%', width: 18, height: 152, borderRadius: 999, background: 'linear-gradient(180deg, #6ed39a, #467d6d)' })} />
+        {[8, 34, 60].map((left, index) => (
+          <div key={`terrace-${left}`} style={shape({ left: `${left}%`, top: `${18 + index * 8}%`, width: 104, height: 118, borderRadius: '18px 18px 12px 12px', background: index === 1 ? '#c6a46e' : '#b88d58', border: `4px solid ${theme.frame}` })} />
+        ))}
+        {[14, 24, 40, 50, 66, 76].map((left) => (
+          <div key={`vine-${left}`} style={shape({ left: `${left}%`, top: '16%', width: 18, height: 170, borderRadius: 999, background: 'linear-gradient(180deg, #6ed39a, #467d6d)' })} />
         ))}
         {[20, 46, 72].map((left) => (
-          <div key={`water-${left}`} style={shape({ left: `${left}%`, top: '46%', width: 46, height: 12, borderRadius: 999, background: 'rgba(132, 218, 255, 0.6)' })} />
+          <div key={`water-${left}`} style={shape({ left: `${left}%`, top: '48%', width: 50, height: 14, borderRadius: 999, background: 'rgba(132, 218, 255, 0.64)' })} />
         ))}
         {[22, 28, 48, 54, 74, 80].map((left, index) => (
-          <div key={`flower-${left}`} style={shape({ left: `${left}%`, top: `${26 + (index % 2) * 18}%`, width: 20, height: 20, borderRadius: '50%', background: index % 2 === 0 ? '#ffd76b' : '#ff9ec0' })} />
+          <div key={`flower-${left}`} style={shape({ left: `${left}%`, top: `${24 + (index % 2) * 18}%`, width: 20, height: 20, borderRadius: '50%', background: index % 2 === 0 ? '#ffd76b' : '#ff9ec0' })} />
         ))}
+        <div style={shape({ left: '50%', bottom: '18%', transform: 'translateX(-50%)', width: '70%', height: 22, borderRadius: 999, background: 'rgba(84, 136, 113, 0.24)' })} />
       </>
     );
   }
@@ -748,12 +1198,14 @@ const RoomThemeScene = ({ theme }) => {
   if (theme.id === 'future-sky-dome') {
     return (
       <>
+        <div style={shape({ left: '12%', top: '10%', width: 86, height: 86, borderRadius: '50%', background: 'radial-gradient(circle at 50% 50%, rgba(240, 248, 255, 0.9) 0%, rgba(175, 224, 255, 0.22) 54%, rgba(175,224,255,0) 100%)' })} />
+        <div style={shape({ right: '18%', top: '16%', width: 122, height: 44, borderRadius: '50%', border: '4px solid rgba(191,225,255,0.42)', transform: 'rotate(-12deg)' })} />
         <div
           style={shape({
             left: '10%',
             right: '10%',
             top: '6%',
-            height: '56%',
+            height: '60%',
             borderRadius: '50% 50% 18px 18px / 68% 68% 18px 18px',
             border: `4px solid ${theme.frame}`,
             background:
@@ -787,24 +1239,26 @@ const RoomThemeScene = ({ theme }) => {
               left: `${left}%`,
               top: '8%',
               width: 2,
-              height: '52%',
+              height: '56%',
               background: theme.frame,
               opacity: 0.42,
             })}
           />
         ))}
+        <div style={shape({ left: '16%', right: '16%', bottom: '28%', height: 10, borderRadius: 999, background: 'rgba(133, 241, 255, 0.18)' })} />
         <div
           style={shape({
             left: '50%',
             bottom: '24%',
             transform: 'translateX(-50%)',
-            width: 136,
-            height: 24,
+            width: 164,
+            height: 26,
             borderRadius: 999,
             background: 'rgba(133, 241, 255, 0.2)',
             border: `3px solid ${theme.accent}`,
           })}
         />
+        <div style={shape({ left: '50%', bottom: '14%', transform: 'translateX(-50%)', width: '76%', height: 18, clipPath: 'polygon(8% 0%, 92% 0%, 100% 100%, 0% 100%)', background: 'linear-gradient(180deg, rgba(133,241,255,0.28), rgba(133,241,255,0.08))' })} />
         {[22, 48, 74].map((left, index) => (
           <div
             key={`console-${left}`}
@@ -819,6 +1273,19 @@ const RoomThemeScene = ({ theme }) => {
             })}
           />
         ))}
+        {[16, 28, 40, 60, 72, 84].map((left, index) => (
+          <div
+            key={`city-${left}`}
+            style={shape({
+              left: `${left}%`,
+              bottom: '30%',
+              width: 18 + (index % 3) * 12,
+              height: 42 + (index % 2) * 24,
+              background: 'rgba(63, 95, 168, 0.34)',
+              borderRadius: '8px 8px 0 0',
+            })}
+          />
+        ))}
       </>
     );
   }
@@ -826,15 +1293,43 @@ const RoomThemeScene = ({ theme }) => {
   return null;
 };
 
-const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
+const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveFurniture }) => {
   const houseId = house?.id ?? null;
   const roomWidth = house?.room?.width ?? BUILDER_ROOM_GRID_SIZE * 10;
   const roomHeight = house?.room?.height ?? BUILDER_ROOM_GRID_SIZE * 7;
   const roomTheme = house?.roomTheme;
   const trayItems = getFurnitureCatalogForTheme(roomTheme?.id);
   const roomRef = useRef(null);
+  const removeZoneRef = useRef(null);
   const [dragState, setDragState] = useState(null);
   const [layoutMode, setLayoutMode] = useState(getRoomLayoutMode);
+  const roomStageScale = getRoomStageScale(roomWidth, roomHeight, layoutMode);
+  const roomDisplayWidth = Math.round(roomWidth * roomStageScale);
+  const roomDisplayHeight = Math.round(roomHeight * roomStageScale);
+  const runtimeIdentity = `${houseId}:${roomWidth}:${roomHeight}:${roomTheme?.id || 'room'}`;
+  const roomRuntimeRef = useRef(createInitialRoomRuntime(roomWidth, roomHeight));
+  const [roomRuntime, setRoomRuntime] = useState(() => createInitialRoomRuntime(roomWidth, roomHeight));
+  const npcActors = getNpcActors(roomTheme, roomWidth, roomHeight, roomRuntime.timeMs);
+  const roomRuntimeSnapshot = buildRoomRuntimeSnapshot(
+    roomRuntime,
+    roomTheme,
+    roomWidth,
+    roomHeight
+  );
+  const roomActors = [
+    ...npcActors.map((actor) => ({
+      ...actor,
+      kind: 'npc',
+    })),
+    roomRuntime.player
+      ? {
+          ...roomRuntime.player,
+          kind: 'player',
+        }
+      : null,
+  ]
+    .filter(Boolean)
+    .sort((left, right) => left.y - right.y);
 
   useEffect(() => {
     const visualViewport = window.visualViewport;
@@ -856,8 +1351,87 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
   }, []);
 
   useEffect(() => {
+    const initialRuntime = createInitialRoomRuntime(roomWidth, roomHeight);
+    roomRuntimeRef.current = initialRuntime;
+    setRoomRuntime(initialRuntime);
     setDragState(null);
-  }, [houseId]);
+  }, [runtimeIdentity, roomWidth, roomHeight]);
+
+  useEffect(() => {
+    roomRuntimeRef.current = roomRuntime;
+  }, [roomRuntime]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const snapshot = buildRoomRuntimeSnapshot(
+      roomRuntimeRef.current,
+      roomTheme,
+      roomWidth,
+      roomHeight
+    );
+    window.__builderRoomRuntime = snapshot;
+
+    return () => {
+      if (window.__builderRoomRuntime === snapshot) {
+        window.__builderRoomRuntime = undefined;
+      }
+    };
+  }, [roomRuntimeSnapshot, roomTheme, roomWidth, roomHeight]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const advanceRuntime = (ms = 1000 / 60) => {
+      setRoomRuntime((current) => {
+        const next = advanceRoomRuntime(current, ms, roomWidth, roomHeight);
+        roomRuntimeRef.current = next;
+        return next;
+      });
+    };
+
+    window.__advanceBuilderRoom = advanceRuntime;
+
+    return () => {
+      if (window.__advanceBuilderRoom === advanceRuntime) {
+        window.__advanceBuilderRoom = undefined;
+      }
+    };
+  }, [runtimeIdentity, roomWidth, roomHeight]);
+
+  useEffect(() => {
+    let animationFrameId = null;
+    let lastTimestamp = null;
+
+    const tick = (timestamp) => {
+      if (lastTimestamp === null) {
+        lastTimestamp = timestamp;
+      }
+
+      const deltaMs = Math.min(34, timestamp - lastTimestamp);
+      lastTimestamp = timestamp;
+
+      setRoomRuntime((current) => {
+        const next = advanceRoomRuntime(current, deltaMs, roomWidth, roomHeight);
+        roomRuntimeRef.current = next;
+        return next;
+      });
+
+      animationFrameId = window.requestAnimationFrame(tick);
+    };
+
+    animationFrameId = window.requestAnimationFrame(tick);
+
+    return () => {
+      if (animationFrameId) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [runtimeIdentity, roomWidth, roomHeight]);
 
   useEffect(() => {
     if (!dragState || !roomRef.current) {
@@ -877,11 +1451,17 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
         event.clientY
       );
 
+      const insideRemoveZone =
+        dragState.source === 'room'
+          ? isPointerInsideBounds(removeZoneRef.current, event.clientX, event.clientY)
+          : false;
+
       setDragState((current) =>
         current && current.pointerId === event.pointerId
           ? {
               ...current,
               insideRoom: dropState.insideRoom,
+              insideRemoveZone,
               previewX: dropState.snapped.x,
               previewY: dropState.snapped.y,
             }
@@ -894,7 +1474,9 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
         return;
       }
 
-      if (dragState.insideRoom) {
+      if (dragState.source === 'room' && dragState.insideRemoveZone) {
+        onRemoveFurniture(houseId, dragState.item.id);
+      } else if (dragState.insideRoom) {
         if (dragState.source === 'tray') {
           onAddFurniture(houseId, dragState.item.typeId, {
             x: dragState.previewX,
@@ -920,7 +1502,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerUp);
     };
-  }, [dragState, houseId, onAddFurniture, onMoveFurniture]);
+  }, [dragState, houseId, onAddFurniture, onMoveFurniture, onRemoveFurniture]);
 
   const beginTrayDrag = (furniture, event) => {
     event.preventDefault();
@@ -939,6 +1521,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
       previewX: 0,
       previewY: 0,
       insideRoom: false,
+      insideRemoveZone: false,
     });
   };
 
@@ -946,17 +1529,65 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
     event.preventDefault();
 
     const bounds = event.currentTarget.getBoundingClientRect();
+    const scale = bounds.width > 0 && item.width > 0 ? bounds.width / item.width : 1;
     setDragState({
       pointerId: event.pointerId,
       source: 'room',
       item,
       pointerOffset: {
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top,
+        x: (event.clientX - bounds.left) / scale,
+        y: (event.clientY - bounds.top) / scale,
       },
       previewX: item.x,
       previewY: item.y,
       insideRoom: true,
+      insideRemoveZone: false,
+    });
+  };
+
+  const handleRoomPointerDown = (event) => {
+    if (dragState || !roomRef.current || event.button !== 0) {
+      return;
+    }
+
+    if (
+      event.target instanceof Element &&
+      event.target.closest('[data-room-item="true"]')
+    ) {
+      return;
+    }
+
+    const bounds = roomRef.current.getBoundingClientRect();
+    const scale =
+      bounds.width > 0 && roomRef.current.clientWidth > 0
+        ? bounds.width / roomRef.current.clientWidth
+        : 1;
+    const player =
+      roomRuntimeRef.current.player || createInitialRoomRuntime(roomWidth, roomHeight).player;
+    const walkBounds = getRoomWalkBounds(roomWidth, roomHeight, player.width, player.height);
+    const nextTargetX = clamp(
+      (event.clientX - bounds.left) / scale - player.width / 2,
+      walkBounds.xMin,
+      walkBounds.xMax
+    );
+    const nextTargetY = clamp(
+      (event.clientY - bounds.top) / scale - player.height / 2,
+      walkBounds.yMin,
+      walkBounds.yMax
+    );
+
+    setRoomRuntime((current) => {
+      const next = {
+        ...current,
+        player: {
+          ...current.player,
+          targetX: nextTargetX,
+          targetY: nextTargetY,
+          facing: nextTargetX < current.player.x ? -1 : 1,
+        },
+      };
+      roomRuntimeRef.current = next;
+      return next;
     });
   };
 
@@ -967,11 +1598,11 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
       style={{
         ...panelStyle,
         width: layoutMode.compact
-          ? 'calc(100vw - 20px)'
-          : 'min(1380px, calc(100vw - 24px))',
-        maxHeight: layoutMode.compact ? 'calc(100dvh - 20px)' : 'calc(100dvh - 24px)',
+          ? 'calc(100vw - 12px)'
+          : 'min(1680px, calc(100vw - 18px))',
+        maxHeight: layoutMode.compact ? 'calc(100dvh - 12px)' : 'calc(100dvh - 18px)',
         overflowY: 'auto',
-        padding: layoutMode.compact ? '18px' : '24px',
+        padding: layoutMode.compact ? '14px' : '20px 22px 24px',
         color: '#17345c',
       }}
     >
@@ -1027,21 +1658,19 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
             display: 'grid',
             gridTemplateColumns: layoutMode.stacked
               ? '1fr'
-              : 'minmax(0, 1fr) minmax(260px, 320px)',
+              : 'minmax(0, 2.12fr) minmax(220px, 268px)',
             gap: 18,
             alignItems: 'start',
           }}
         >
           <div
             style={{
-              padding: 18,
-              borderRadius: 28,
-              background: `linear-gradient(180deg, ${roomTheme?.skyTop || 'rgba(255,255,255,0.96)'}, ${
-                roomTheme?.skyBottom || 'rgba(255,255,255,0.72)'
-              } 54%, ${roomTheme?.floorTop || 'rgba(247, 222, 188, 0.96)'} 54%, ${
-                roomTheme?.floorBottom || 'rgba(234, 193, 144, 0.96)'
-              } 100%)`,
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.82), 0 22px 44px rgba(15, 23, 42, 0.12)',
+              padding: layoutMode.compact ? 10 : 14,
+              borderRadius: 30,
+              background:
+                'linear-gradient(180deg, rgba(255,255,255,0.46), rgba(255,255,255,0.16) 60%, rgba(255,255,255,0.12) 100%)',
+              boxShadow:
+                'inset 0 1px 0 rgba(255,255,255,0.82), 0 24px 52px rgba(15, 23, 42, 0.12)',
             }}
           >
             <div
@@ -1049,103 +1678,203 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
               style={{
                 position: 'relative',
                 width: '100%',
-                maxWidth: roomWidth + (layoutMode.compact ? 24 : 32),
-                minHeight: roomHeight + (layoutMode.compact ? 24 : 32),
+                maxWidth: roomDisplayWidth + (layoutMode.compact ? 16 : 22),
+                minHeight: roomDisplayHeight + (layoutMode.compact ? 16 : 22),
                 margin: '0 auto',
-                padding: layoutMode.compact ? 12 : 16,
-                borderRadius: 24,
+                padding: layoutMode.compact ? 8 : 10,
+                borderRadius: 26,
                 background:
-                  'linear-gradient(180deg, rgba(215, 238, 255, 0.42) 0%, rgba(255,255,255,0.22) 38%, rgba(255,255,255,0.08) 38%, rgba(0,0,0,0) 38%)',
+                  'linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.08))',
               }}
             >
               <div
-                ref={roomRef}
                 style={{
                   position: 'relative',
-                  width: roomWidth,
-                  height: roomHeight,
+                  width: roomDisplayWidth,
+                  height: roomDisplayHeight,
                   margin: '0 auto',
-                  borderRadius: 18,
-                  overflow: 'hidden',
-                  backgroundColor: roomTheme?.wallTop || '#fffdf8',
-                  backgroundImage: `
-                    linear-gradient(${roomTheme?.grid || 'rgba(23, 52, 92, 0.08)'} 1px, transparent 1px),
-                    linear-gradient(90deg, ${roomTheme?.grid || 'rgba(23, 52, 92, 0.08)'} 1px, transparent 1px),
-                    linear-gradient(180deg, ${roomTheme?.skyTop || '#f8fafc'} 0%, ${roomTheme?.skyBottom || '#ffffff'} 32%, ${roomTheme?.wallTop || '#fffdf8'} 32%, ${roomTheme?.wallBottom || '#f2e8d8'} 66%, ${roomTheme?.floorTop || '#d8b48a'} 66%, ${roomTheme?.floorBottom || '#8f6b4f'} 100%)
-                  `,
-                  backgroundSize: `${BUILDER_ROOM_GRID_SIZE}px ${BUILDER_ROOM_GRID_SIZE}px`,
-                  boxShadow: dragState?.insideRoom
-                    ? `inset 0 0 0 3px ${roomTheme?.accent || 'rgba(96, 165, 250, 0.34)'}`
-                    : `inset 0 0 0 2px ${roomTheme?.frame || 'rgba(23, 52, 92, 0.08)'}`,
-                  touchAction: 'none',
                 }}
               >
-                <RoomThemeScene theme={roomTheme} />
+                <div
+                  id="builder-room-stage"
+                  ref={roomRef}
+                  onPointerDown={handleRoomPointerDown}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: roomWidth,
+                    height: roomHeight,
+                    transform: `scale(${roomStageScale})`,
+                    transformOrigin: 'top left',
+                    borderRadius: 20,
+                    overflow: 'hidden',
+                    backgroundColor: roomTheme?.wallTop || '#fffdf8',
+                    boxShadow: dragState?.insideRoom
+                      ? `inset 0 0 0 3px ${roomTheme?.accent || 'rgba(96, 165, 250, 0.34)'}, 0 26px 60px rgba(15, 23, 42, 0.18)`
+                      : `inset 0 0 0 2px ${roomTheme?.frame || 'rgba(23, 52, 92, 0.08)'}, 0 22px 52px rgba(15, 23, 42, 0.14)`,
+                    touchAction: 'none',
+                    cursor: dragState ? 'default' : 'pointer',
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: roomTheme?.wallTop || '#fffdf8',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      height: '38%',
+                      background: roomTheme?.skyTop || roomTheme?.wallTop || '#f8fafc',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: '24%',
+                      height: '46%',
+                      background: roomTheme?.wallTop || '#fffdf8',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: '32%',
+                      background: roomTheme?.floorTop || '#d8b48a',
+                      borderTop: `3px solid ${roomTheme?.frame || 'rgba(23, 52, 92, 0.12)'}`,
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      bottom: '32%',
+                      height: 14,
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0))',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background:
+                        'radial-gradient(circle at 50% 18%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 62%)',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background:
+                        'radial-gradient(circle at 50% 0%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 58%)',
+                    }}
+                  />
+                  <RoomThemeScene theme={roomTheme} />
 
-                {roomItems.map((item) => {
-                  const isDragged = dragState?.source === 'room' && dragState.item.id === item.id;
+                  {roomItems.map((item) => {
+                    const isDragged = dragState?.source === 'room' && dragState.item.id === item.id;
 
-                  return (
-                    <button
-                      key={item.id}
-                      id={`builder-room-item-${item.id}`}
-                      type="button"
-                      onPointerDown={(event) => beginPlacedItemDrag(item, event)}
+                    return (
+                      <button
+                        key={item.id}
+                        id={`builder-room-item-${item.id}`}
+                        data-room-item="true"
+                        type="button"
+                        onPointerDown={(event) => beginPlacedItemDrag(item, event)}
+                        style={{
+                          position: 'absolute',
+                          left: item.x,
+                          top: item.y,
+                          width: item.width,
+                          height: item.height,
+                          border: 0,
+                          padding: 0,
+                          background: 'transparent',
+                          cursor: 'grab',
+                          opacity: isDragged ? 0.18 : 1,
+                          touchAction: 'none',
+                          userSelect: 'none',
+                        }}
+                        aria-label={`Move ${item.name}`}
+                      >
+                        <FurnitureArt item={item} />
+                      </button>
+                    );
+                  })}
+
+                  {roomActors.map((actor) => (
+                    <div
+                      key={`${actor.kind}-${actor.id || actor.name}`}
                       style={{
                         position: 'absolute',
-                        left: item.x,
-                        top: item.y,
-                        width: item.width,
-                        height: item.height,
-                        border: 0,
-                        padding: 0,
-                        background: 'transparent',
-                        cursor: 'grab',
-                        opacity: isDragged ? 0.18 : 1,
-                        touchAction: 'none',
-                        userSelect: 'none',
+                        left: actor.x,
+                        top: actor.y,
+                        width: actor.width,
+                        height: actor.height,
+                        zIndex: 12 + Math.round(actor.y),
+                        pointerEvents: 'none',
                       }}
-                      aria-label={`Move ${item.name}`}
                     >
-                      <FurnitureArt item={item} />
-                    </button>
-                  );
-                })}
+                      {actor.kind === 'player' ? (
+                        <UnicornActorArt actor={actor} timeMs={roomRuntime.timeMs} />
+                      ) : (
+                        <RoomNpcArt actor={actor} timeMs={roomRuntime.timeMs} />
+                      )}
+                    </div>
+                  ))}
 
-                {dragState?.insideRoom && (
-                  <div
+                  {dragState?.insideRoom && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: dragState.previewX,
+                        top: dragState.previewY,
+                        width: dragState.item.width,
+                        height: dragState.item.height,
+                        pointerEvents: 'none',
+                        zIndex: 20,
+                      }}
+                    >
+                      <FurnitureArt item={dragState.item} ghost />
+                    </div>
+                  )}
+
+                  {roomItems.length === 0 && !dragState?.insideRoom && (
+                    <div
                     style={{
                       position: 'absolute',
-                      left: dragState.previewX,
-                      top: dragState.previewY,
-                      width: dragState.item.width,
-                      height: dragState.item.height,
-                      pointerEvents: 'none',
-                      zIndex: 20,
-                    }}
-                  >
-                    <FurnitureArt item={dragState.item} ghost />
-                  </div>
-                )}
-
-                {roomItems.length === 0 && !dragState?.insideRoom && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '50%',
-                      top: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      textAlign: 'center',
+                      left: 18,
+                      bottom: 18,
+                      maxWidth: 220,
+                      padding: '12px 14px',
+                      borderRadius: 18,
+                      background: 'rgba(255,255,255,0.74)',
+                      boxShadow: '0 14px 24px rgba(15, 23, 42, 0.12)',
+                      textAlign: 'left',
                       whiteSpace: 'pre-line',
-                      fontSize: 18,
+                      fontSize: 14,
                       fontWeight: 700,
                       lineHeight: 1.25,
                       color: '#48627f',
+                      pointerEvents: 'none',
                     }}
                   >
-                    {'Drag a tray friend\ninto the room\nand let it snap'}
+                      {'Click anywhere to guide the unicorn.\nRoom friends wander on their own.\nDrag decor in when you are ready.'}
                   </div>
                 )}
+              </div>
               </div>
             </div>
           </div>
@@ -1176,7 +1905,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
               Room Rules
             </div>
             <div style={{ whiteSpace: 'pre-line', lineHeight: 1.34, fontSize: 15 }}>
-                {'Drag from the tray.\nDrop inside the scene.\nEverything snaps to 32.'}
+                {'Click the room to guide the unicorn.\nDrag from the tray.\nDrag room pieces to remove.'}
             </div>
           </div>
 
@@ -1238,6 +1967,52 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
                 borderRadius: 24,
                 padding: '18px 18px',
                 display: 'grid',
+                gap: 8,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: 1.2,
+                  textTransform: 'uppercase',
+                  opacity: 0.72,
+                }}
+              >
+                Room Cast
+              </div>
+              {[roomRuntime.player, ...npcActors].map((actor) => (
+                <div
+                  key={`cast-${actor.id || actor.name}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    fontSize: 14,
+                    fontWeight: actor.id ? 700 : 800,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      background: actor.accentColor || roomTheme?.accent || '#f4b457',
+                      boxShadow: '0 0 0 3px rgba(255,255,255,0.56)',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span>{actor.name}</span>
+                </div>
+              ))}
+            </div>
+
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.62)',
+                borderRadius: 24,
+                padding: '18px 18px',
+                display: 'grid',
                 gap: 10,
               }}
             >
@@ -1284,6 +2059,46 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture }) => {
                   </div>
                 </button>
               ))}
+            </div>
+
+            <div
+              ref={removeZoneRef}
+              id="builder-room-remove-zone"
+              style={{
+                background: dragState?.source === 'room' && dragState.insideRemoveZone
+                  ? 'linear-gradient(180deg, rgba(255, 222, 222, 0.96), rgba(255, 196, 196, 0.9))'
+                  : 'rgba(255,255,255,0.62)',
+                borderRadius: 24,
+                padding: '18px 18px',
+                border:
+                  dragState?.source === 'room'
+                    ? `2px dashed ${dragState.insideRemoveZone ? '#dc2626' : 'rgba(220, 38, 38, 0.34)'}`
+                    : '2px dashed rgba(23, 52, 92, 0.12)',
+                boxShadow: dragState?.source === 'room' && dragState.insideRemoveZone
+                  ? '0 16px 28px rgba(220, 38, 38, 0.14)'
+                  : 'none',
+                transition: 'background 120ms ease, border-color 120ms ease, box-shadow 120ms ease',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: 1.2,
+                  textTransform: 'uppercase',
+                  opacity: 0.72,
+                  marginBottom: 8,
+                }}
+              >
+                Remove Piece
+              </div>
+              <div style={{ fontSize: 15, lineHeight: 1.34, whiteSpace: 'pre-line' }}>
+                {dragState?.source === 'room'
+                  ? dragState.insideRemoveZone
+                    ? 'Release now.\nThis room piece goes away.'
+                    : 'Drag a placed piece here.\nRelease to send it away.'
+                  : 'Need a new look?\nDrag a placed piece here\nand then bring in another.'}
+              </div>
             </div>
           </div>
         </div>

@@ -728,3 +728,21 @@ export const moveFurnitureInHouse = (builderState, houseId, itemId, rawPosition)
     })),
   };
 };
+
+export const removeFurnitureFromHouse = (builderState, houseId, itemId) => {
+  const house = getHouseById(builderState, houseId);
+  if (!house || !itemId) {
+    return builderState;
+  }
+
+  return {
+    ...builderState,
+    houses: mapHouse(builderState, houseId, (currentHouse) => ({
+      ...currentHouse,
+      room: {
+        ...currentHouse.room,
+        items: currentHouse.room.items.filter((item) => item.id !== itemId),
+      },
+    })),
+  };
+};

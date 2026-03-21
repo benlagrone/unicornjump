@@ -15,12 +15,15 @@ This is not the quality matrix and it is not the phased roadmap.
 
 ## Snapshot
 
-- on-disk image assets in `public/assets/images/`: `154` files, excluding `.DS_Store`
+- on-disk image assets in `public/assets/images/`: `169` files, excluding `.DS_Store`
 - gameplay unicorn art on disk: `7` files
 - biome creature SVGs on disk: `45`
 - biome companion SVGs on disk: `45`
 - biome collectible SVGs on disk: `15`
 - world prop / landmark SVGs on disk: `10`
+- world gate SVGs on disk: `5`
+- biome platform trim SVGs on disk: `5`
+- biome ground cap SVGs on disk: `5`
 - runtime-defined builder house themes: `9`
 - runtime-defined builder room shell themes: `9`
 - runtime-defined builder furniture definitions: `28`
@@ -124,7 +127,7 @@ This is not the quality matrix and it is not the phased roadmap.
 
 ### Platform
 
-- Shared floating-platform kit `7`
+- Shared floating-platform base kit `7`
   - `public/assets/images/platform/earth-1.png`
   - `public/assets/images/platform/earth-2.png`
   - `public/assets/images/platform/earth-3.png`
@@ -132,12 +135,24 @@ This is not the quality matrix and it is not the phased roadmap.
   - `public/assets/images/platform/earth-5.png`
   - `public/assets/images/platform/earth-6.png`
   - `public/assets/images/platform/earth-7.png`
+- Biome platform trim overlay set `5`
+  - `public/assets/images/world/lantern-bamboo-valley/platform/trim.svg`
+  - `public/assets/images/world/highland-meadow/platform/trim.svg`
+  - `public/assets/images/world/storybook-forest/platform/trim.svg`
+  - `public/assets/images/world/sun-orchard/platform/trim.svg`
+  - `public/assets/images/world/bluebonnet-prairie/platform/trim.svg`
 
 ### Ground
 
-- Shared landing-ground kit `2`
+- Shared landing-ground base kit `2`
   - `public/assets/images/ground/earth-repeat-x-1.png`
   - `public/assets/images/ground/earth-repeat-x-2.png`
+- Biome landing-ground cap overlay set `5`
+  - `public/assets/images/world/lantern-bamboo-valley/ground/cap.svg`
+  - `public/assets/images/world/highland-meadow/ground/cap.svg`
+  - `public/assets/images/world/storybook-forest/ground/cap.svg`
+  - `public/assets/images/world/sun-orchard/ground/cap.svg`
+  - `public/assets/images/world/bluebonnet-prairie/ground/cap.svg`
 
 ### Power-Up
 
@@ -147,21 +162,26 @@ This is not the quality matrix and it is not the phased roadmap.
 
 ### World
 
-- `Lantern Bamboo Valley` world files `2`
+- `Lantern Bamboo Valley` world prop / landmark / gate files `3`
   - `public/assets/images/world/lantern-bamboo-valley/props/tea-table.svg`
   - `public/assets/images/world/lantern-bamboo-valley/landmark/lantern-stand.svg`
-- `Highland Meadow` world files `2`
+  - `public/assets/images/world/lantern-bamboo-valley/gate/sky-lantern-gate.svg`
+- `Highland Meadow` world prop / landmark / gate files `3`
   - `public/assets/images/world/highland-meadow/props/wool-cart.svg`
   - `public/assets/images/world/highland-meadow/landmark/stone-circle.svg`
-- `Storybook Forest` world files `2`
+  - `public/assets/images/world/highland-meadow/gate/breeze-arch.svg`
+- `Storybook Forest` world prop / landmark / gate files `3`
   - `public/assets/images/world/storybook-forest/props/mushroom-house.svg`
   - `public/assets/images/world/storybook-forest/landmark/story-tree.svg`
-- `Sun Orchard` world files `2`
+  - `public/assets/images/world/storybook-forest/gate/page-arch.svg`
+- `Sun Orchard` world prop / landmark / gate files `3`
   - `public/assets/images/world/sun-orchard/props/mirror-stand.svg`
   - `public/assets/images/world/sun-orchard/landmark/citrus-arbor.svg`
-- `Bluebonnet Prairie` world files `2`
+  - `public/assets/images/world/sun-orchard/gate/golden-arbor.svg`
+- `Bluebonnet Prairie` world prop / landmark / gate files `3`
   - `public/assets/images/world/bluebonnet-prairie/props/windmill-post.svg`
   - `public/assets/images/world/bluebonnet-prairie/landmark/bluebonnet-patch.svg`
+  - `public/assets/images/world/bluebonnet-prairie/gate/windmill-gate.svg`
 
 ## Runtime-Defined Builder Inventory
 
@@ -231,14 +251,11 @@ Source:
 These are the biggest packages that still do not exist as discrete assets on disk:
 
 - faithful SVG gameplay unicorn state sheet under `public/assets/images/character/unicorn/`
-- biome gate art for all five biomes under `public/assets/images/world/<biome>/gate/`
 - per-biome world map thumbnails under `public/assets/images/world/<biome>/map/`
 - per-biome background stacks under `public/assets/images/world/<biome>/background/`
 - extra biome obstruction variants beyond the current single SVG per biome
 - Lantern Garden hub package under `public/assets/images/hub/lantern-garden/`
 - splash world map package under `public/assets/images/world-map/`
-- biome-specific platform trim kits
-- biome-specific ground kits
 - discrete builder house art packages
 - discrete builder room-shell art packages
 - discrete builder furniture art packages

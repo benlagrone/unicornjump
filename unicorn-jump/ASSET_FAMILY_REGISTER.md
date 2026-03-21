@@ -62,25 +62,25 @@ No grouped production blind spots are allowed.
 | Lantern Bamboo Valley Background Stack | biome 1 world layers | `Good` to `Better` | `Best` | bespoke parallax stack |
 | Lantern Bamboo Valley Village Prop Set | tea table and local props | `Good` to `Better` | `Better` then `Best` | discrete art package expansion |
 | Lantern Bamboo Valley Landmark Set | lantern stand and major anchors | `Good` to `Better` | `Best` | landmark-grade silhouette and scene role |
-| Lantern Bamboo Valley Gate Set | sky lantern gate family | missing to `Good` | `Better` then `Best` | discrete gate art |
+| Lantern Bamboo Valley Gate Set | sky lantern gate family | `Good` | `Better` then `Best` | stronger activation glow and lantern detail |
 | Highland Meadow Background Stack | biome 2 world layers | `Good` | `Better` then `Best` | meadow-specific layered scene |
 | Highland Meadow Village Prop Set | wool cart and local props | `Good` | `Better` | discrete prop art package |
 | Highland Meadow Landmark Set | stone circle and major anchors | `Good` | `Best` | stronger landmark identity |
-| Highland Meadow Gate Set | breeze arch family | missing to `Good` | `Better` then `Best` | discrete gate art |
+| Highland Meadow Gate Set | breeze arch family | `Good` | `Better` then `Best` | stronger heather / wool silhouette and arch depth |
 | Storybook Forest Background Stack | biome 3 world layers | `Good` | `Better` then `Best` | storybook forest layered scene |
 | Storybook Forest Village Prop Set | mushroom house and local props | `Good` | `Better` | discrete prop art package |
 | Storybook Forest Landmark Set | story tree and major anchors | `Good` | `Best` | stronger storybook silhouette |
-| Storybook Forest Gate Set | page arch family | missing to `Good` | `Better` then `Best` | discrete gate art |
+| Storybook Forest Gate Set | page arch family | `Good` | `Better` then `Best` | stronger page fold read and magic-book detail |
 | Sun Orchard Background Stack | biome 4 world layers | `Good` | `Better` then `Best` | orchard-specific layered scene |
 | Sun Orchard Village Prop Set | mirror stand and local props | `Good` | `Better` | discrete prop art package |
 | Sun Orchard Landmark Set | citrus arbor and major anchors | `Good` | `Best` | stronger landmark-grade finish |
-| Sun Orchard Gate Set | golden arbor family | missing to `Good` | `Better` then `Best` | discrete gate art |
+| Sun Orchard Gate Set | golden arbor family | `Good` | `Better` then `Best` | stronger fruit / leaf layering and mirror detail |
 | Bluebonnet Prairie Background Stack | biome 5 world layers | `Good` | `Better` then `Best` | prairie-specific layered scene |
 | Bluebonnet Prairie Village Prop Set | windmill post and local props | `Good` | `Better` | discrete prop art package |
 | Bluebonnet Prairie Landmark Set | bluebonnet patch and major anchors | `Good` | `Best` | stronger landmark-grade finish |
-| Bluebonnet Prairie Gate Set | windmill gate family | missing to `Good` | `Better` then `Best` | discrete gate art |
-| Biome Platform Trim Package | per-biome platform identity overlays | planned | `Better` then `Best` | build five biome trim kits |
-| Biome Ground Package | per-biome landing ground identity | planned | `Better` then `Best` | build five biome ground kits |
+| Bluebonnet Prairie Gate Set | windmill gate family | `Good` | `Better` then `Best` | stronger vane read and flower-cluster detail |
+| Biome Platform Trim Package | per-biome platform identity overlays | `Good` | `Better` then `Best` | deepen the trim families and strengthen biome-specific read at gameplay size |
+| Biome Ground Package | per-biome landing ground identity | `Good` | `Better` then `Best` | deepen the cap kits and tie them closer to each biome’s landmark language |
 
 ## Builder House Families
 

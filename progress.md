@@ -1103,6 +1103,38 @@ TODO:
 - Next world-art runtime commit should externalize biome gate / portal art so the landing scenes stop mixing real village/landmark sprites with the old generic gate JSX.
 - After that, the next clean visual identity pass is biome-specific platform / ground kits so the climb stack also stops feeling shared.
 
+2026-03-18:
+- Took the next world-art runtime commit by externalizing biome gate / portal art for all five landing scenes.
+- Extended `unicorn-jump/scripts/generate_world_scene_sprites.js` with gate SVG generation for each biome:
+  - `sky-lantern-gate.svg`
+  - `breeze-arch.svg`
+  - `page-arch.svg`
+  - `golden-arbor.svg`
+  - `windmill-gate.svg`
+- Wrote those assets into `unicorn-jump/public/assets/images/world/<biome>/gate/`.
+- Updated `unicorn-jump/src/spriteCatalog.js` with `getWorldGateSpriteAsset` so the runtime resolves the new gate SVG package alongside the existing village / landmark art.
+- Updated `unicorn-jump/src/Game.js` so landing scenes render the new gate SVGs directly instead of the old generic gate JSX when the asset exists.
+- Cleaned the existing border-style warning path in `Game.js` by replacing the remaining fallback `border` shorthand mixes with longhand border properties for:
+  - the `sun-orchard` landmark fallback;
+  - the generic gate fallback.
+- Validation after the gate-art pass:
+  - `node unicorn-jump/scripts/generate_world_scene_sprites.js` regenerated the full world-scene art set successfully.
+  - `xmllint --noout` passes across all `5` generated gate SVG files.
+  - `npm run build` passes.
+  - Required shared web-game client smoke verification wrote artifacts to `unicorn-jump/output/web-game/gate-smoke/`:
+    - `shot-0.png` shows the Lantern Bamboo landing scene with the real `Sky Lantern Gate` art in place;
+    - `state-0.json` confirms the landing scene still exposes `Tea Table`, `Lantern Stand`, and `Sky Lantern Gate` in text state.
+  - Focused direct browser verification wrote artifacts to `unicorn-jump/output/web-game/gate-biomes-direct/`:
+    - one screenshot + state JSON per biome landing scene;
+    - `summary.json` confirms all `5` biomes matched the expected `/assets/images/world/.../gate/*.svg` path;
+    - all biome runs reported `errors: []`.
+- Testing gotcha:
+  - menu automation that clicks a `world-node-*` button and then presses `Enter` can stay on the menu because focus remains on the node button; the direct verification sweep used preloaded `gardenMessengerJourney` localStorage per biome to avoid false negatives in gate-art checks.
+
+TODO:
+- Next art identity pass should replace the shared climb-platform / landing-ground kit with biome-specific platform stacks so the worlds stop converging visually once the player leaves the landing strip.
+- If menu automation coverage becomes important, consider adding a deterministic biome-selection test hook or adjusting the map menu keyboard/focus behavior so “select biome then start” is stable under Playwright.
+
 2026-03-17:
 - Added `unicorn-jump/ASSET_INVENTORY.md` as the literal asset inventory:
   - exact on-disk asset families under `public/assets/images/`
@@ -1113,3 +1145,229 @@ TODO:
   - corrected the builder runtime snapshot to include `9` room-shell themes
   - corrected the biome rows so props / landmarks are marked as discrete files while gates are still missing
 - Updated `unicorn-jump/SPRITES.md` to point at the new literal inventory doc.
+
+2026-03-18:
+- Added the next world-art pass by creating a full biome gate package in `unicorn-jump/public/assets/images/world/<biome>/gate/`:
+  - `sky-lantern-gate.svg`
+  - `breeze-arch.svg`
+  - `page-arch.svg`
+  - `golden-arbor.svg`
+  - `windmill-gate.svg`
+- Extended `unicorn-jump/scripts/generate_world_scene_sprites.js` so props, landmarks, and gates are generated together instead of gates being one-off files.
+- Extended `unicorn-jump/src/spriteCatalog.js` with world gate asset lookup and updated `unicorn-jump/src/Game.js` so landing scenes now render real gate SVGs with the old JSX arch kept only as fallback.
+- Validation:
+  - `node scripts/generate_world_scene_sprites.js` regenerated the full world-scene package successfully.
+  - `xmllint --noout` passed on all `5` new gate SVG files.
+  - `npm run build` passed.
+  - Required browser verification passed against `http://127.0.0.1:3010` after escalating out of the sandbox for both the CRA dev server and Playwright.
+  - `unicorn-jump/output/web-game/gate-art-pass/` now contains one landing-scene screenshot plus matching text-state JSON for each biome:
+    - `lantern-bamboo-valley`
+    - `highland-meadow`
+    - `storybook-forest`
+    - `sun-orchard`
+    - `bluebonnet-prairie`
+  - The captured `landingSet` state for each biome confirms the expected gate names in live runtime:
+    - `Sky Lantern Gate`
+    - `Breeze Arch`
+    - `Page Arch`
+    - `Golden Arbor`
+    - `Windmill Gate`
+
+TODO:
+- Next art pass should probably deepen the gate families from `Good` to `Better` with activation-state variants or stronger unlock glows once the benchmark biome background stacks exist.
+- After gates, the biggest world-art gap is still per-biome background stacks and ground / platform trim kits.
+
+2026-03-20:
+- Added the next world-surface art pass by creating biome-specific platform trim overlays and landing-ground cap overlays in `unicorn-jump/public/assets/images/world/<biome>/{platform,ground}/`:
+  - `platform/trim.svg` for all `5` biomes
+  - `ground/cap.svg` for all `5` biomes
+- Extended `unicorn-jump/scripts/generate_world_scene_sprites.js` again so props, landmarks, gates, platform trims, and ground caps now come from one repeatable world-scene generator.
+- Extended `unicorn-jump/src/spriteCatalog.js` with:
+  - `getPlatformTrimAsset`
+  - `getLandingGroundCapAsset`
+- Updated `unicorn-jump/src/Game.js` so:
+  - gameplay platforms now layer the biome trim SVG over the shared platform PNG base;
+  - landing floors now layer the biome ground-cap SVG over the shared ground/platform base;
+  - the base raster kit remains in place underneath, so this is a world-identity pass rather than a risky collision/render rewrite.
+- Validation:
+  - `node scripts/generate_world_scene_sprites.js` regenerated the full world-scene package successfully.
+  - `xmllint --noout` passed on all `10` new platform / ground SVG files.
+  - `npm run build` passed.
+  - Browser verification passed against `http://127.0.0.1:3010` after escalating out of the sandbox for both the CRA dev server and Playwright.
+  - `unicorn-jump/output/web-game/surface-kit-pass/` now contains one landing-scene screenshot plus matching text-state JSON for all `5` biomes, with no `errors-*.json` files produced.
+
+TODO:
+- Next strongest gameplay-world art pass is still per-biome background stacks behind these new surface kits.
+- Separate from the jumper world, `P2` builder backgrounds still need a much larger atmosphere pass; that should happen in `BuilderRoom.js` after the main biome background stack work is underway.
+
+2026-03-20:
+- Finished the next `P2` room-builder commit by making furniture removal / replacement real instead of one-way placement.
+- Extended `unicorn-jump/src/builderState.js` with `removeFurnitureFromHouse(builderState, houseId, itemId)` so room items can be deleted immutably without resetting the rest of the builder world.
+- Updated `unicorn-jump/src/App.js` to wire a dedicated `handleBuilderRemoveFurniture` action into the existing builder state flow and pass that callback into `BuilderRoom`.
+- Reworked `unicorn-jump/src/BuilderRoom.js` so placed furniture can be dragged into a dedicated remove zone:
+  - tracks `insideRemoveZone` alongside the existing room-drop preview state;
+  - deletes the dragged room item on pointer release over `#builder-room-remove-zone`;
+  - keeps the existing add / move behavior unchanged when the drop stays inside the room;
+  - updates the room instructions so the remove behavior is visible in the live UI.
+- Validation after the `P2` remove-and-replace pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke artifacts remain in `unicorn-jump/output/web-game/p2-remove-smoke/` and still show builder world opening cleanly from the menu.
+  - Focused direct browser verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-remove-direct/`:
+    - `after-place.json` confirms `Jade Lantern` placed at `x: 96, y: 128`;
+    - `after-remove.json` confirms the room returns to `furniture: []` after dropping the placed item into the remove zone;
+    - `after-replace.json` confirms a `Tea Floor Table` replacement appears at `x: 192, y: 160`;
+    - `after-replace.png` shows the final room state with the replacement item visible in the live builder;
+    - `summary.json` condenses the sequence to `jade-lantern -> removedCount: 0 -> tea-floor-table`.
+- Testing gotcha:
+  - the app's `window.render_game_to_text()` returns JSON text, not a live object; direct browser verification needs to `JSON.parse(...)` that payload before asserting on builder-room state.
+
+TODO:
+- Next `P2` commitment should be lightweight builder persistence so placed houses and room furniture survive reloads without having to replay the setup flow.
+- After persistence, the next useful builder slice is room-to-world affordance polish: stronger occupied-tile previews, visited-room badges, or a clearer “return to your garden” loop from the main menu.
+
+2026-03-20:
+- Reworked the `P2` room presentation so builder interiors feel like the main event instead of a small inset card.
+- Updated `unicorn-jump/src/BuilderRoom.js` layout and rendering:
+  - removed the repeated striped/grid interior treatment from the room surface;
+  - replaced it with solid-color `sky / wall / floor` bands driven by each room theme palette;
+  - added a viewport-aware room-stage scale so the live room grows to fill most of the left column on desktop;
+  - widened the left/right split so the room column dominates the page;
+  - made room drag math scale-aware so add / move / remove still snap correctly after the room is visually enlarged.
+- Validation after the room-scale / solid-background pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke verification wrote updated artifacts to `unicorn-jump/output/web-game/p2-room-scale-smoke/` and confirmed builder world still opens cleanly from the menu.
+  - Focused direct browser verification wrote artifacts to `unicorn-jump/output/web-game/p2-room-scale-direct/`:
+    - `future-sky-dome-room.png` shows the simplified solid-color `Nova Dome Lounge` interior with the room occupying the clear majority of the page;
+    - `after-move.json` confirms scaled dragging still snaps correctly, with `Nova Gem Cluster` landing at `x: 288, y: 160`;
+    - `summary.json` reports `roomGridBounds.widthRatio: 0.632` and `heightRatio: 0.544` against a `1600 x 1180` viewport.
+
+TODO:
+- If the sidebar still feels too tall during furniture-heavy sessions, the next room-layout polish pass should collapse some of the right-column cards or move low-priority stats into a lighter header treatment.
+
+2026-03-20:
+- Fixed the builder-world identity problem where every placed house used the same generic mini icon regardless of destination type.
+- Reworked `unicorn-jump/src/BuilderWorld.js` to add per-type mini house art:
+  - added a `HouseArt` SVG renderer with distinct silhouettes for `Korean Garden Court`, `Fantasy Bavarian Castle`, `Spanish Palace Suite`, `MesoAmerican Pyramid`, `GrecoRoman Circus`, `Scandinavian Longhouse`, `Japanese Fortress`, `Babylonian Hanging Gardens`, and `Future Sky Dome`;
+  - replaced the old single generic occupied-tile house drawing with that per-type art in the world grid;
+  - reused the same mini art in the `House Styles` selector and `Houses` list so the builder UI no longer mixes custom destinations with generic letter badges.
+- Cleaned the last dead `roomBackdrop` references in `unicorn-jump/src/BuilderRoom.js` so the earlier room-background refactor still builds cleanly.
+- Validation after the builder-world house-sprite pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke verification wrote artifacts to `unicorn-jump/output/web-game/p2-house-sprites-smoke/` and confirmed builder world still opens cleanly from the menu.
+  - Focused direct browser verification wrote artifacts to `unicorn-jump/output/web-game/p2-house-sprites-direct/`:
+    - `builder-world-state.json` confirms five distinct house types were placed across the top row;
+    - `summary.json` records `korean-garden-court`, `fantasy-bavarian-castle`, `mesoamerican-pyramid-room`, `future-sky-dome`, and `babylonian-hanging-gardens` occupying `tile-0-0` through `tile-4-0`;
+    - `builder-world-house-sprites.png` shows those five houses reading as different mini structures on the live builder page instead of palette-swapped copies.
+
+TODO:
+- The next builder-world art step should probably externalize these mini house illustrations into real asset files or broaden the same treatment to empty-tile previews so “Place MP / Place HG” also gets a destination-specific preview instead of text only.
+
+2026-03-20:
+- Took the next `P2` art pass in `unicorn-jump/src/BuilderRoom.js` and moved the themed rooms from flat shell backdrops to fuller destination scenes.
+- Added a theme backdrop system with per-destination gradients / haze / floor treatments via `getRoomBackdrop(theme)`:
+  - each room now gets its own `sky`, `wall`, `wallTexture`, `floor`, `floorPattern`, `horizonLine`, and ambient glow instead of the old generic three-band fill.
+- Reworked `RoomThemeScene` for the main destination set so the room backgrounds read like actual places:
+  - `Korean Garden Court`: moon gate, pavilion roof, bamboo clusters, bridge rails, pond glow, lanterns, and distant mountain silhouettes;
+  - `Fantasy Bavarian Castle`: alpine silhouettes, tower masses, tall windows, banners, balcony rail, and chandelier light;
+  - `Spanish Palace Suite`: larger arches, hanging lamps, fountain centerpiece, richer tile floor treatment, and warm courtyard depth;
+  - `MesoAmerican Pyramid`: larger stepped pyramid, temple cap, sun disk, torch stands, glyph stones, and jungle canopy silhouettes;
+  - `GrecoRoman Circus`: colonnade rhythm, arena oval, banners, garlands, and brighter open-air architecture;
+  - `Scandinavian Longhouse`: heavier beams / rafters, wider windows, hearth glow, and stronger hall framing;
+  - `Japanese Fortress`: layered roof silhouettes, brighter moonlight, denser shoji wall, bridge rail, lanterns, and blossom accents;
+  - `Babylonian Hanging Gardens`: bigger arches, terrace masses, more vines / water runs, and layered garden depth;
+  - `Future Sky Dome`: stronger dome shell, orbital ring, stars, skyline, runway glow, and console bay.
+- Tuned the room layout so the improved scenes can actually read:
+  - widened the left/right split again in favor of the room stage;
+  - increased the desktop room max scale;
+  - tightened the room wrapper padding so the themed background uses more of the visible panel.
+- Validation after the `P2` background pass:
+  - `npm run build` passed.
+  - Required shared web-game client verification wrote artifacts to `unicorn-jump/output/web-game/p2-background-pass-client/` and confirmed the builder path still opens from the main menu.
+  - Focused direct browser verification wrote fresh multi-theme artifacts to `unicorn-jump/output/web-game/p2-background-pass-direct/` for:
+    - `korean-garden-court`
+    - `spanish-palace-suite`
+    - `japanese-fortress`
+    - `babylonian-hanging-gardens`
+    - `future-sky-dome`
+  - `summary.json` in that folder confirms each destination opened cleanly in `mode: "builder-room"` with the expected `typeId`, room dimensions, tray contents, and no captured errors.
+
+TODO:
+- The next `P2` art step should deepen the remaining destination scenes that were not part of the first verification sweep, especially `Fantasy Bavarian Castle`, `MesoAmerican Pyramid`, `GrecoRoman Circus`, and `Scandinavian Longhouse`.
+- After that, the strongest builder art gap becomes the world screen itself: destination-specific empty-tile previews and richer atmosphere behind the house grid.
+
+2026-03-20:
+- Took the next builder-world art commitment in `unicorn-jump/src/BuilderWorld.js` so `P2` now has a more authored world board instead of a plain placement grid.
+- Added a per-destination world-scene layer with `getWorldScene(...)`:
+  - the builder world now swaps board gradients, glow, tile backgrounds, and text mood per selected destination;
+  - empty tiles no longer use the same generic green-white card for every world type.
+- Added reusable builder-world art helpers:
+  - `WorldFeatureArt` for destination scene silhouettes;
+  - `PlacementPreviewArt` for empty-tile previews;
+  - `WorldBoardAtmosphere` for the large board-level scenic backdrop.
+- Reworked empty tile art so the selected destination is visible before placement:
+  - each empty tile now shows a ghost destination scene plus a small matching house preview instead of just a `+` bubble and short label;
+  - the tile palette and border also shift with the selected house type.
+- Added a selected-destination hero strip above the world grid:
+  - larger scene art;
+  - matching mini house art;
+  - theme name and tagline so the board feels like a destination picker instead of a neutral editor.
+- Updated the `House Styles` list so the selected button now picks up the same destination-specific background treatment.
+- Validation after the builder-world atmosphere / preview pass:
+  - `npm run build` passed.
+  - Required shared web-game client verification wrote artifacts to `unicorn-jump/output/web-game/p2-world-art-pass-client/` and confirmed the builder-world route still opens from the main menu.
+  - Focused direct browser verification wrote artifacts to `unicorn-jump/output/web-game/p2-world-art-pass-direct/`:
+    - `default-world.png` / `.json`
+    - `japanese-selected.png` / `.json`
+    - `future-selected.png` / `.json`
+    - `future-placed.png` / `.json`
+    - `summary.json`
+  - `summary.json` confirms the selected destination changed from `korean-garden-court` to `japanese-fortress` to `future-sky-dome`, and then that a `Future Sky Dome` house was successfully placed on `tile-0-0`.
+  - No `errors.json` or `errors-*.json` files were produced in either verification folder.
+
+TODO:
+- The next strongest builder-world art step is making the world grid itself feel less rectangular and editor-like: path overlays, garden districts, or tile clustering so the screen reads more like a magical neighborhood map.
+- After that, the remaining `P2` room-art gap is still the unverified destination set: `Fantasy Bavarian Castle`, `MesoAmerican Pyramid`, `GrecoRoman Circus`, and `Scandinavian Longhouse`.
+
+2026-03-20:
+- Added the next `P2` room-life pass so interiors feel inhabited instead of frozen set dressing.
+- Reworked `unicorn-jump/src/BuilderRoom.js` to add a lightweight room runtime:
+  - a controllable `Little Unicorn` actor that uses the existing `public/assets/images/character/unicorn_little.svg` sprite inside the room;
+  - two ambient NPCs (`Guide` and `Room Friend`) with deterministic idle movement lanes, facing, and bobbing;
+  - click-to-move on `#builder-room-stage`, with the unicorn walking toward the clicked floor position;
+  - room-cast UI and updated room instructions so the new interaction is discoverable;
+  - builder-room item dragging still works, with furniture clicks excluded from click-to-move targeting.
+- Updated `unicorn-jump/src/App.js` so builder-room `render_game_to_text()` now reports live `player` and `npcs` state instead of a stale one-time snapshot, and `window.advanceTime(ms)` forwards to the room runtime when the builder room is active.
+- Validation after the room-actor / unicorn pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke verification wrote `unicorn-jump/output/web-game/p2-room-actors-smoke/state-0.json`, confirming the builder path still opens cleanly from the main menu.
+  - Focused direct browser verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-actors-direct/`:
+    - `initial.json` confirms the room now exposes `player` plus `2` NPCs in `mode: "builder-room"`;
+    - `after-idle.json` confirms the NPCs drift over time (`npcMoved: true`);
+    - `after-target.json` confirms clicking the room updates the unicorn target from `(81, 213)` to `(344, 246)`;
+    - `after-move.json` confirms the unicorn reaches that clicked destination (`playerMoved: true`);
+    - `summary.json` records `unicornSpriteCount: 1`, `npcMoved: true`, `playerTargetChanged: true`, `playerMoved: true`, and no browser errors;
+    - `meso-room-actors.png` visually shows the `Sun Step Chamber` room with both NPCs and the unicorn present in the live scene.
+
+TODO:
+- The next builder-life pass should probably give NPCs simple emotes, short speech bubbles, or soft interaction reactions so the rooms feel social instead of purely decorative.
+- If room navigation expands beyond click-to-move, add simple collision / walk-behind rules so the unicorn and NPCs can route around larger furniture pieces cleanly.
+
+2026-03-20:
+- Reworked the `P2` builder-world presentation so house placement happens on a tiny round planet instead of a visible square grid.
+- Updated `unicorn-jump/src/BuilderWorld.js`:
+  - kept the existing builder state and tile IDs intact, but remapped the `20` tile slots onto curated anchor points across a circular planetoid;
+  - replaced the boxy tile board with a Little Prince / Little Nemo style globe scene using orbital rings, a spherical surface, theme-tinted atmosphere, and glowing landing pads;
+  - moved occupied houses onto those planet pads with depth-scaled house markers and compact `KG 1` / `FD 5` style badges instead of full card labels on the world itself;
+  - added a smaller floating destination card so the currently selected world style still reads clearly without returning to a grid;
+  - updated builder-world copy so the screen now describes the planet-world interaction directly.
+- Validation after the planet-world pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke verification wrote `unicorn-jump/output/web-game/p2-planet-world-smoke/shot-0.png` and `state-0.json`, confirming the builder world still opens cleanly from the main menu in `mode: "builder-world"`.
+  - Focused direct browser verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-planet-world-direct/`:
+    - `planet-world-populated.png` shows five different house types placed across the round planet surface instead of a square grid;
+    - `builder-world-state.json` confirms the world held five placed houses on `tile-0-0`, `tile-4-0`, `tile-2-1`, `tile-1-2`, and `tile-3-3`;
+    - `summary.json` records those occupied tiles, the five house types, measured screen positions for the placed world markers, and no browser errors.
+
+TODO:
+- The next strongest world pass is to let the planet itself feel more alive: slow orbit drift, twinkling satellites, or a subtle rotate / bob on the globe would push the Little Prince feeling further.
+- If we want the planet to scale beyond one screenful, the next structural step is planet pages or constellations rather than adding more patches to the same sphere.
