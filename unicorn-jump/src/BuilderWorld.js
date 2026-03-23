@@ -1001,15 +1001,19 @@ const BuilderWorld = ({
       return undefined;
     }
 
-    const snapshot = buildBuilderWorldSnapshot(worldRuntimeRef.current);
-    window.__builderWorldRuntime = snapshot;
+    window.__builderWorldRuntime = worldRuntimeSnapshot;
+    return undefined;
+  }, [worldRuntimeSnapshot]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
 
     return () => {
-      if (window.__builderWorldRuntime === snapshot) {
-        window.__builderWorldRuntime = undefined;
-      }
+      window.__builderWorldRuntime = undefined;
     };
-  }, [worldRuntimeSnapshot]);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') {

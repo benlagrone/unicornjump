@@ -129,7 +129,7 @@ const NPC_ACTOR_SIZE = {
   width: 34,
   height: 42,
 };
-const ROOM_SOCIAL_NEAR_DISTANCE = 48;
+const ROOM_SOCIAL_NEAR_DISTANCE = 92;
 
 const getRoomWalkBounds = (roomWidth, roomHeight, actorWidth, actorHeight) => ({
   xMin: 12,

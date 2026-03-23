@@ -1328,6 +1328,33 @@ TODO:
 - The next strongest builder-world art step is making the world grid itself feel less rectangular and editor-like: path overlays, garden districts, or tile clustering so the screen reads more like a magical neighborhood map.
 - After that, the remaining `P2` room-art gap is still the unverified destination set: `Fantasy Bavarian Castle`, `MesoAmerican Pyramid`, `GrecoRoman Circus`, and `Scandinavian Longhouse`.
 
+2026-03-22:
+- Took the next `P2` world-art commitment by pushing the builder-world planet from static illustration into a live destination object.
+- Extended `unicorn-jump/src/BuilderWorld.js` with stronger ambient planet life:
+  - twinkling star points around the globe;
+  - orbiting satellite accents on outer rings;
+  - stronger ring motion / drift;
+  - more visible cloud / glow drift around the planet shell.
+- Kept the existing planet placement flow intact: tile IDs, click targets, and house placement behavior are unchanged.
+- Fixed a builder-world runtime export bug while verifying the motion:
+  - `window.__builderWorldRuntime` was being cleared too aggressively on every render tick, which made `render_game_to_text()` and direct browser inspection miss the live world motion;
+  - split runtime exposure and cleanup so the world-motion snapshot now stays available while the builder world is mounted and only clears on unmount.
+- Validation after the planet-life pass:
+  - `npm run build` passed.
+  - Required shared web-game client verification wrote artifacts to `unicorn-jump/output/web-game/p2-planet-life-pass-client/` and confirmed the builder world still opens from the main menu.
+  - Focused deterministic browser verification wrote artifacts to `unicorn-jump/output/web-game/p2-planet-life-pass-direct/`.
+  - `summary.json` in that folder now includes live `worldMotion` snapshots and confirms the motion system advances over time:
+    - `timeMs` advanced from `250` to `2959`;
+    - `planetOffsetY` advanced from `-0.78` to `-8.01`;
+    - `planetTiltDeg` advanced from `0.23` to `1.44`;
+    - ring, star, satellite, and cloud phases all changed as expected;
+    - switching to `Future Sky Dome` preserved the same live world-motion structure with a different selected destination;
+    - no browser errors were captured.
+
+TODO:
+- The next strongest builder-world art step is giving the planet a stronger sense of place progression: constellations, planet pages, or multiple linked tiny worlds instead of adding more detail to a single sphere forever.
+- The next social-life step for `P2` is still inside the rooms: NPC emotes, speech bubbles, or light reactions so the interior scenes feel inhabited, not just animated.
+
 2026-03-20:
 - Added the next `P2` room-life pass so interiors feel inhabited instead of frozen set dressing.
 - Reworked `unicorn-jump/src/BuilderRoom.js` to add a lightweight room runtime:
@@ -1376,17 +1403,45 @@ TODO:
 - Finished the next builder-world atmosphere pass so the planet board now feels alive instead of static.
 - Updated `unicorn-jump/src/BuilderWorld.js`:
   - added a lightweight builder-world runtime with `timeMs` state that drives planet float/tilt, star twinkles, satellite orbit + bob, cloud drift, and landing-pad marker pulsing;
-  - removed the wall-clock CSS-only motion for the main planet atmosphere and moved those visible transforms onto the deterministic runtime so `window.advanceTime(ms)` and the actual scene stay aligned;
-  - expanded the exported builder-world snapshot so browser verification can now see `planetTiltDeg`, star intensity, satellite orbit/bob state, and cloud drift in `window.__builderWorldRuntime`.
+  - exposed that runtime on `window.__builderWorldRuntime` plus `window.__advanceBuilderWorld(ms)` so browser automation can inspect and advance the exact live scene state;
+  - expanded `PlanetTileButton` so occupied houses bob, empty patches pulse, and landing glows breathe instead of sitting perfectly still on the globe.
 - Updated `unicorn-jump/src/App.js`:
   - expanded builder-world `render_game_to_text()` to include the live `worldMotion` snapshot;
   - wired `window.advanceTime(ms)` to forward to `window.__advanceBuilderWorld` while the builder world is active.
 - Validation after the builder-world motion pass:
   - `npm run build` passed.
-  - Required shared web-game client verification wrote fresh artifacts to `output/web-game/builder-world-motion/`.
-  - `state-0.json` to `state-2.json` now show live changes in `planetOffsetY`, `planetTiltDeg`, star twinkles, satellite orbit phases, and cloud drift with no browser errors.
-  - `shot-0.png` and `shot-2.png` visually confirm the planet board still renders cleanly while the atmosphere elements animate.
+  - Required shared web-game client verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-planet-motion-smoke/`:
+    - `state-0.json` now reports live `worldMotion` fields including `planetOffsetY`, `planetTiltDeg`, star twinkles, satellite orbit/bob values, and cloud drift;
+    - `shot-0.png` confirms the builder world still opens cleanly from the main menu with the animated planet board intact.
+  - Focused direct browser verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-planet-motion-direct/`:
+    - `initial.json` captured the builder world at `timeMs: 0`;
+    - `after-motion.json` captured the same screen after `2200ms` of runtime progression and confirmed changes in `planetOffsetY`, `planetTiltDeg`, `ringPhase`, star twinkles, satellite orbit/bob, and cloud drift;
+    - `populated.json` and `planet-motion-populated.png` confirm four placed houses still render cleanly on the moving globe;
+    - `summary.json` records the motion delta, the populated house count, the occupied tiles, and no browser errors.
+  - One direct Playwright check needed DOM-dispatched tile clicks because the bobbing world markers no longer satisfy Playwright's default "stable element" click heuristic during hover.
 
 TODO:
-- The next builder-life pass should still be NPC social reactions in the room: short bubbles, emotes, or proximity responses so the spaces feel inhabited.
+- The next builder-life pass should push the social layer outward: reactive props, fuller NPC silhouettes, or short room-specific interaction beats now that the chatter runtime is working.
 - If builder-world motion grows further, consider exposing one compact `focusMotion` summary in text-state instead of the full star list to keep automation output smaller.
+
+2026-03-22:
+- Took the next `P2` room-art commitment and made the builder rooms feel inhabited instead of only decorative.
+- Updated `unicorn-jump/src/BuilderRoom.js`:
+  - kept the theme-driven NPC chatter layer in place, but fixed the social state so `chatty` actors now always carry actual `speechText` instead of falling through to `null`;
+  - widened the NPC proximity reaction range so click-to-move reliably produces greetings instead of requiring the unicorn to land almost directly on top of a character;
+  - added a `Room Mood` panel and hid the empty-room onboarding card after the first real movement so the new bubbles stay readable.
+- Updated `unicorn-jump/src/App.js`:
+  - expanded builder-room `render_game_to_text()` to include the live `social` snapshot from `window.__builderRoomRuntime`, not just raw `player` and `npcs`.
+- Expanded the builder-room runtime export used by automation:
+  - `window.__builderRoomRuntime` and builder-room `render_game_to_text()` now expose `mood`, `emote`, `speechText`, `nearPlayer`, and `social.activeLine` for the live cast.
+- Validation after the room-social pass:
+  - `npm run build` passed.
+  - Required shared web-game client verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-social-smoke/`, confirming the builder world still opens cleanly from the main menu after the room-runtime changes.
+  - Focused direct browser verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-social-direct/`:
+    - `initial.json` shows the first builder room immediately after entry with live idle chatter from both NPCs plus a player thought bubble in text-state;
+    - `after-near.json` confirms the unicorn and guide both switch into nearby greeting behavior once the unicorn walks over;
+    - `room-social-near.png` visually shows the guide bubble, unicorn reaction bubble, and the sidebar `Room Mood` panel all aligned;
+    - `summary.json` records the before/after social states, the nearby NPC id, the changed active line, and no browser errors.
+
+TODO:
+- The next `P2` room-life pass should either make furniture / props react to nearby NPC chatter or upgrade the NPC art silhouettes so the cast feels less placeholder-simple next to the improved rooms.
