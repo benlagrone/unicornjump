@@ -1371,3 +1371,22 @@ TODO:
 TODO:
 - The next strongest world pass is to let the planet itself feel more alive: slow orbit drift, twinkling satellites, or a subtle rotate / bob on the globe would push the Little Prince feeling further.
 - If we want the planet to scale beyond one screenful, the next structural step is planet pages or constellations rather than adding more patches to the same sphere.
+
+2026-03-22:
+- Finished the next builder-world atmosphere pass so the planet board now feels alive instead of static.
+- Updated `unicorn-jump/src/BuilderWorld.js`:
+  - added a lightweight builder-world runtime with `timeMs` state that drives planet float/tilt, star twinkles, satellite orbit + bob, cloud drift, and landing-pad marker pulsing;
+  - removed the wall-clock CSS-only motion for the main planet atmosphere and moved those visible transforms onto the deterministic runtime so `window.advanceTime(ms)` and the actual scene stay aligned;
+  - expanded the exported builder-world snapshot so browser verification can now see `planetTiltDeg`, star intensity, satellite orbit/bob state, and cloud drift in `window.__builderWorldRuntime`.
+- Updated `unicorn-jump/src/App.js`:
+  - expanded builder-world `render_game_to_text()` to include the live `worldMotion` snapshot;
+  - wired `window.advanceTime(ms)` to forward to `window.__advanceBuilderWorld` while the builder world is active.
+- Validation after the builder-world motion pass:
+  - `npm run build` passed.
+  - Required shared web-game client verification wrote fresh artifacts to `output/web-game/builder-world-motion/`.
+  - `state-0.json` to `state-2.json` now show live changes in `planetOffsetY`, `planetTiltDeg`, star twinkles, satellite orbit phases, and cloud drift with no browser errors.
+  - `shot-0.png` and `shot-2.png` visually confirm the planet board still renders cleanly while the atmosphere elements animate.
+
+TODO:
+- The next builder-life pass should still be NPC social reactions in the room: short bubbles, emotes, or proximity responses so the spaces feel inhabited.
+- If builder-world motion grows further, consider exposing one compact `focusMotion` summary in text-state instead of the full star list to keep automation output smaller.

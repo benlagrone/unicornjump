@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getHouseById } from './builderState';
 
 const panelStyle = {
@@ -738,10 +738,12 @@ const PlanetTileButton = ({
   house,
   selectedHouseType,
   onTilePress,
+  timeMs,
 }) => {
   const occupied = Boolean(house);
   const entry = occupied ? house : selectedHouseType;
   const scene = getWorldScene(entry);
+  const motionPhase = layout.rowIndex * 0.72 + layout.columnIndex * 0.38;
   const markerWidth = Math.round((occupied ? 124 : 98) * layout.scale);
   const markerHeight = Math.round((occupied ? 134 : 102) * layout.scale);
   const houseSize = Math.round(86 * layout.scale);
@@ -752,6 +754,12 @@ const PlanetTileButton = ({
   const padBorder = occupied
     ? `2px solid ${scene.palette.trimColor}44`
     : `2px dashed ${scene.palette.trimColor}44`;
+  const markerBob = Math.sin(timeMs / 1400 + motionPhase) * (occupied ? 3.4 : 2.2);
+  const houseBob = Math.sin(timeMs / 1180 + motionPhase * 1.3) * 2.4;
+  const plusScale = 1 + Math.sin(timeMs / 1040 + motionPhase) * 0.06;
+  const glowOpacity = occupied
+    ? 0.74 + ((Math.sin(timeMs / 920 + motionPhase) + 1) / 2) * 0.2
+    : 0.52 + ((Math.sin(timeMs / 760 + motionPhase) + 1) / 2) * 0.18;
 
   return (
     <button
@@ -762,7 +770,7 @@ const PlanetTileButton = ({
         position: 'absolute',
         left: `${layout.x}%`,
         top: `${layout.y}%`,
-        transform: 'translate(-50%, -100%)',
+        transform: `translate(-50%, -100%) translateY(${markerBob}px)`,
         width: markerWidth,
         height: markerHeight,
         border: 0,
@@ -788,7 +796,7 @@ const PlanetTileButton = ({
           borderRadius: '50%',
           background: occupied ? house.palette.glowColor : 'rgba(255,255,255,0.22)',
           filter: 'blur(12px)',
-          opacity: occupied ? 0.92 : 0.68,
+          opacity: glowOpacity,
         }}
       />
       <div
@@ -817,7 +825,7 @@ const PlanetTileButton = ({
               position: 'absolute',
               left: '50%',
               bottom: Math.round(18 * layout.scale),
-              transform: 'translateX(-50%)',
+              transform: `translateX(-50%) translateY(${houseBob}px)`,
             }}
           >
             <HouseArt entry={house} size={houseSize} />
@@ -850,7 +858,7 @@ const PlanetTileButton = ({
             position: 'absolute',
             left: '50%',
             bottom: Math.round(26 * layout.scale),
-            transform: 'translateX(-50%)',
+            transform: `translateX(-50%) scale(${plusScale})`,
             width: plusSize,
             height: plusSize,
             borderRadius: '50%',
@@ -870,6 +878,103 @@ const PlanetTileButton = ({
   );
 };
 
+const PLANET_STARS = [
+  { left: '8%', top: '12%', size: 8, delayMs: 0 },
+  { left: '18%', top: '24%', size: 6, delayMs: 1100 },
+  { left: '30%', top: '10%', size: 10, delayMs: 400 },
+  { left: '72%', top: '16%', size: 8, delayMs: 1800 },
+  { left: '86%', top: '28%', size: 6, delayMs: 900 },
+  { left: '14%', top: '74%', size: 7, delayMs: 1500 },
+  { left: '78%', top: '78%', size: 9, delayMs: 200 },
+];
+
+const PLANET_SATELLITES = [
+  { size: '96%', durationMs: 22000, delayMs: 0, angle: '14deg', icon: 'circle' },
+  { size: '112%', durationMs: 30000, delayMs: -4000, angle: '144deg', icon: 'lantern' },
+  { size: '126%', durationMs: 36000, delayMs: -10000, angle: '262deg', icon: 'gem' },
+];
+
+const ANIMATED_PLANET_CLOUDS = [
+  { id: 'cloud-a', left: 18, top: 18, width: 70, height: 22, durationMs: 8000, delayMs: 0, driftX: 11 },
+  { id: 'cloud-b', left: 50, top: 28, width: 88, height: 28, durationMs: 10000, delayMs: 800, driftX: 13 },
+  { id: 'cloud-c', left: 80, top: 38, width: 106, height: 34, durationMs: 12000, delayMs: 1600, driftX: 15 },
+];
+
+const toAnimationPhase = (timeMs, durationMs, delayMs = 0) => {
+  const cycle = durationMs || 1;
+  const raw = ((timeMs + delayMs) % cycle) / cycle;
+  return raw < 0 ? raw + 1 : raw;
+};
+
+const getPlanetFloatMotion = (timeMs) => {
+  const phase = toAnimationPhase(timeMs, 10000);
+  const arc = Math.sin(phase * Math.PI);
+
+  return {
+    planetOffsetY: Number((-10 * arc).toFixed(2)),
+    planetTiltDeg: Number((Math.sin(phase * Math.PI * 2) * 1.5).toFixed(2)),
+  };
+};
+
+const getPlanetStarMotion = (timeMs, delayMs = 0) => {
+  const phase = toAnimationPhase(timeMs, 3800, delayMs);
+  const sparkle = (Math.sin(phase * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+
+  return {
+    opacity: Number((0.22 + sparkle * 0.68).toFixed(3)),
+    scale: Number((0.85 + sparkle * 0.33).toFixed(3)),
+  };
+};
+
+const getSatelliteBobOffset = (timeMs, index) => {
+  const phase = toAnimationPhase(timeMs, (4 + index) * 1000);
+  return Number((Math.sin(phase * Math.PI) * -6).toFixed(2));
+};
+
+const createInitialBuilderWorldRuntime = () => ({
+  timeMs: 0,
+});
+
+const advanceBuilderWorldRuntime = (runtime, ms) => ({
+  ...runtime,
+  timeMs: runtime.timeMs + ms,
+});
+
+const buildBuilderWorldSnapshot = (runtime) => ({
+  timeMs: Math.round(runtime.timeMs),
+  ...getPlanetFloatMotion(runtime.timeMs),
+  ringPhase: Number(toAnimationPhase(runtime.timeMs, 30000).toFixed(3)),
+  reverseRingPhase: Number(toAnimationPhase(runtime.timeMs, 44000).toFixed(3)),
+  stars: PLANET_STARS.map((star, index) => ({
+    id: `star-${index}`,
+    ...getPlanetStarMotion(runtime.timeMs, star.delayMs),
+  })),
+  satellites: PLANET_SATELLITES.map((satellite, index) => {
+    return {
+      id: `satellite-${index}`,
+      orbitPhase: Number(
+        toAnimationPhase(runtime.timeMs, satellite.durationMs, satellite.delayMs).toFixed(3)
+      ),
+      bobPhase: Number(toAnimationPhase(runtime.timeMs, (4 + index) * 1000).toFixed(3)),
+      bobOffsetY: getSatelliteBobOffset(runtime.timeMs, index),
+      angle: satellite.angle,
+      size: satellite.size,
+      icon: satellite.icon,
+    };
+  }),
+  clouds: ANIMATED_PLANET_CLOUDS.map((cloud) => {
+    const phase = toAnimationPhase(runtime.timeMs, cloud.durationMs, cloud.delayMs);
+    const driftX = Number((-10 + Math.sin(phase * Math.PI) * cloud.driftX).toFixed(2));
+
+    return {
+      id: cloud.id,
+      x: Number((cloud.left + driftX / 16).toFixed(2)),
+      y: cloud.top,
+      opacity: Number((0.12 + Math.sin(phase * Math.PI) * 0.06).toFixed(3)),
+    };
+  }),
+});
+
 const BuilderWorld = ({
   builderState,
   houseTypes,
@@ -883,6 +988,80 @@ const BuilderWorld = ({
     houseTypes.find((houseType) => houseType.id === selectedHouseTypeId) || houseTypes[0];
   const selectedScene = getWorldScene(selectedHouseType);
   const planetSlots = getPlanetSlotLayouts(builderState.tiles);
+  const worldRuntimeRef = useRef(createInitialBuilderWorldRuntime());
+  const [worldRuntime, setWorldRuntime] = useState(() => createInitialBuilderWorldRuntime());
+  const worldRuntimeSnapshot = buildBuilderWorldSnapshot(worldRuntime);
+
+  useEffect(() => {
+    worldRuntimeRef.current = worldRuntime;
+  }, [worldRuntime]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const snapshot = buildBuilderWorldSnapshot(worldRuntimeRef.current);
+    window.__builderWorldRuntime = snapshot;
+
+    return () => {
+      if (window.__builderWorldRuntime === snapshot) {
+        window.__builderWorldRuntime = undefined;
+      }
+    };
+  }, [worldRuntimeSnapshot]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const advanceRuntime = (ms = 1000 / 60) => {
+      setWorldRuntime((current) => {
+        const next = advanceBuilderWorldRuntime(current, ms);
+        worldRuntimeRef.current = next;
+        return next;
+      });
+    };
+
+    window.__advanceBuilderWorld = advanceRuntime;
+
+    return () => {
+      if (window.__advanceBuilderWorld === advanceRuntime) {
+        window.__advanceBuilderWorld = undefined;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    let animationFrameId = null;
+    let lastTimestamp = null;
+
+    const tick = (timestamp) => {
+      if (lastTimestamp === null) {
+        lastTimestamp = timestamp;
+      }
+
+      const deltaMs = Math.min(34, timestamp - lastTimestamp);
+      lastTimestamp = timestamp;
+
+      setWorldRuntime((current) => {
+        const next = advanceBuilderWorldRuntime(current, deltaMs);
+        worldRuntimeRef.current = next;
+        return next;
+      });
+
+      animationFrameId = window.requestAnimationFrame(tick);
+    };
+
+    animationFrameId = window.requestAnimationFrame(tick);
+
+    return () => {
+      if (animationFrameId) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, []);
 
   return (
     <div
@@ -1037,18 +1216,89 @@ const BuilderWorld = ({
                   position: 'absolute',
                   left: '50%',
                   top: '52%',
-                  transform: 'translate(-50%, -50%)',
+                  transform: `translate(-50%, calc(-50% + ${worldRuntimeSnapshot.planetOffsetY}px)) rotate(${worldRuntimeSnapshot.planetTiltDeg}deg)`,
                   width: 'min(100%, 880px)',
                   aspectRatio: '1 / 1',
                 }}
               >
+                {PLANET_STARS.map((star, index) => (
+                  <div
+                    key={`planet-star-${index}`}
+                    style={{
+                      position: 'absolute',
+                      left: star.left,
+                      top: star.top,
+                      width: star.size,
+                      height: star.size,
+                      borderRadius: '50%',
+                      background: index % 2 === 0 ? 'rgba(255,255,255,0.92)' : selectedScene.palette.accentColor,
+                      boxShadow: `0 0 12px ${selectedScene.palette.accentColor}`,
+                      opacity: worldRuntimeSnapshot.stars[index]?.opacity ?? 0.4,
+                      transform: `scale(${worldRuntimeSnapshot.stars[index]?.scale ?? 1})`,
+                    }}
+                  />
+                ))}
+
+                {PLANET_SATELLITES.map((satellite, index) => (
+                  <div
+                    key={`planet-satellite-orbit-${index}`}
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: '50%',
+                      width: satellite.size,
+                      height: satellite.size,
+                      transform: `translate(-50%, -50%) rotate(${(worldRuntimeSnapshot.satellites[index]?.orbitPhase ?? 0) * 360}deg)`,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: '50%',
+                        border: index === 1
+                          ? `1px dashed ${selectedScene.tileBorder}`
+                          : `1px solid ${selectedScene.tileBorder}`,
+                        opacity: index === 0 ? 0.26 : 0.18,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: '50%',
+                        transform: `rotate(${satellite.angle}) translateX(calc(${satellite.size} / 2.08))`,
+                        transformOrigin: '0 0',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 24 - index * 3,
+                          height: 24 - index * 3,
+                          transform: `translateY(${worldRuntimeSnapshot.satellites[index]?.bobOffsetY ?? 0}px)`,
+                          borderRadius: satellite.icon === 'gem' ? 8 : '50%',
+                          background:
+                            satellite.icon === 'circle'
+                              ? 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.42))'
+                              : satellite.icon === 'lantern'
+                                ? `linear-gradient(180deg, #fff7cc, ${selectedScene.palette.accentColor})`
+                                : `linear-gradient(180deg, rgba(255,255,255,0.92), ${selectedScene.palette.accentColor})`,
+                          border: `2px solid ${selectedScene.palette.trimColor}`,
+                          boxShadow: `0 0 18px ${selectedScene.palette.glowColor}`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+
                 <div
                   style={{
                     position: 'absolute',
                     inset: '2%',
                     borderRadius: '50%',
                     border: `2px dashed ${selectedScene.tileBorder}`,
-                    transform: 'rotate(-8deg)',
+                    transform: `rotate(${worldRuntimeSnapshot.ringPhase * 360 - 8}deg)`,
                     opacity: 0.64,
                   }}
                 />
@@ -1058,7 +1308,7 @@ const BuilderWorld = ({
                     inset: '8% 3%',
                     borderRadius: '50%',
                     border: `1px solid ${selectedScene.tileBorder}`,
-                    transform: 'rotate(11deg)',
+                    transform: `rotate(${11 - worldRuntimeSnapshot.reverseRingPhase * 360}deg)`,
                     opacity: 0.4,
                   }}
                 />
@@ -1117,19 +1367,20 @@ const BuilderWorld = ({
                       background: 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(15, 23, 42, 0.08))',
                     }}
                   />
-                  {[18, 50, 80].map((left, index) => (
+                  {ANIMATED_PLANET_CLOUDS.map((cloud, index) => (
                     <div
-                      key={`planet-cloud-${left}`}
+                      key={cloud.id}
                       style={{
                         position: 'absolute',
-                        left: `${left}%`,
-                        top: `${18 + index * 10}%`,
-                        width: 70 + index * 18,
-                        height: 22 + index * 6,
+                        left: `${worldRuntimeSnapshot.clouds[index]?.x ?? cloud.left}%`,
+                        top: `${worldRuntimeSnapshot.clouds[index]?.y ?? cloud.top}%`,
+                        width: cloud.width,
+                        height: cloud.height,
                         borderRadius: 999,
                         background: 'rgba(255,255,255,0.16)',
                         filter: 'blur(8px)',
                         transform: 'translateX(-50%)',
+                        opacity: worldRuntimeSnapshot.clouds[index]?.opacity ?? 0.16,
                       }}
                     />
                   ))}
@@ -1153,6 +1404,7 @@ const BuilderWorld = ({
                         house={house}
                         selectedHouseType={selectedHouseType}
                         onTilePress={onTilePress}
+                        timeMs={worldRuntime.timeMs}
                       />
                     );
                   })}

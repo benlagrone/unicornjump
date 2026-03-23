@@ -435,27 +435,35 @@ const App = () => {
         HOUSE_TYPES.find((houseType) => houseType.id === selectedBuilderHouseTypeId) || HOUSE_TYPES[0];
 
       renderState = () =>
-        JSON.stringify({
-          mode: 'builder-world',
-          grid: {
-            columns: BUILDER_WORLD_COLUMNS,
-            rows: BUILDER_WORLD_ROWS,
-          },
-          selectedHouseType: {
-            id: selectedHouseType.id,
-            name: selectedHouseType.name,
-          },
-          houses: builderState.houses.map((house) => ({
-            id: house.id,
-            name: house.name,
-            tileId: house.tileId,
-            typeId: house.typeId,
-            shortLabel: house.shortLabel,
-          })),
-          occupiedTiles: builderState.tiles
-            .filter((tile) => tile.houseId)
-            .map((tile) => tile.id),
-        });
+        JSON.stringify((() => {
+          const worldMotion =
+            typeof window !== 'undefined' && window.__builderWorldRuntime
+              ? window.__builderWorldRuntime
+              : null;
+
+          return {
+            mode: 'builder-world',
+            grid: {
+              columns: BUILDER_WORLD_COLUMNS,
+              rows: BUILDER_WORLD_ROWS,
+            },
+            selectedHouseType: {
+              id: selectedHouseType.id,
+              name: selectedHouseType.name,
+            },
+            houses: builderState.houses.map((house) => ({
+              id: house.id,
+              name: house.name,
+              tileId: house.tileId,
+              typeId: house.typeId,
+              shortLabel: house.shortLabel,
+            })),
+            occupiedTiles: builderState.tiles
+              .filter((tile) => tile.houseId)
+              .map((tile) => tile.id),
+            worldMotion,
+          };
+        })());
     } else if (screen === 'builderRoom' && activeBuilderHouse) {
       const trayItems = getFurnitureCatalogForTheme(activeBuilderHouse.roomTheme?.id);
 
@@ -505,6 +513,15 @@ const App = () => {
     }
 
     const advanceTime = (ms = 1000 / 60) => {
+      if (
+        screen === 'builderWorld' &&
+        typeof window !== 'undefined' &&
+        typeof window.__advanceBuilderWorld === 'function'
+      ) {
+        window.__advanceBuilderWorld(ms);
+        return;
+      }
+
       if (
         screen === 'builderRoom' &&
         typeof window !== 'undefined' &&
