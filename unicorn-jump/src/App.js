@@ -504,6 +504,7 @@ const App = () => {
             })),
             player: roomRuntime?.player || null,
             npcs: roomRuntime?.npcs || [],
+            social: roomRuntime?.social || null,
           };
         })());
     }
