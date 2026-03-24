@@ -473,6 +473,9 @@ const App = () => {
             typeof window !== 'undefined' && window.__builderRoomRuntime
               ? window.__builderRoomRuntime
               : null;
+          const reactiveFurnitureById = new Map(
+            (roomRuntime?.reactiveItems || []).map((item) => [item.id, item])
+          );
 
           return {
             mode: 'builder-room',
@@ -501,10 +504,14 @@ const App = () => {
               y: item.y,
               width: item.width,
               height: item.height,
+              reaction: reactiveFurnitureById.get(item.id)?.reaction || null,
+              reactingTo: reactiveFurnitureById.get(item.id)?.speaker || null,
             })),
             player: roomRuntime?.player || null,
             npcs: roomRuntime?.npcs || [],
             social: roomRuntime?.social || null,
+            roomReaction: roomRuntime?.roomReaction || null,
+            reactiveFurniture: roomRuntime?.reactiveItems || [],
           };
         })());
     }

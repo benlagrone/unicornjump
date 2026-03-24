@@ -1445,3 +1445,46 @@ TODO:
 
 TODO:
 - The next `P2` room-life pass should either make furniture / props react to nearby NPC chatter or upgrade the NPC art silhouettes so the cast feels less placeholder-simple next to the improved rooms.
+
+2026-03-24:
+- Took the next `P2` room-life commitment and let the rooms answer the cast instead of keeping all the motion on the NPC bubbles.
+- Updated `unicorn-jump/src/BuilderRoom.js`:
+  - added deterministic room-reaction state so placed furniture can answer nearby speech / emotes with type-specific motion like glow, sway, bounce, flutter, and sparkle;
+  - wired the existing theme shell response layer into the live room so destination props now pulse with conversation instead of staying visually frozen behind the actors;
+  - added a `Room Echo` panel so the sidebar reports which piece is answering and how many room pieces are currently active.
+- Updated `unicorn-jump/src/App.js`:
+  - expanded builder-room `render_game_to_text()` so furniture entries can report their live reaction state;
+  - added `roomReaction` plus `reactiveFurniture` to the builder-room text snapshot for automation.
+- Validation after the room-reaction pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke verification wrote fresh artifacts to `output/web-game/p2-room-reaction-smoke/`, confirming the builder world still opens cleanly from the main menu.
+  - Focused direct browser verification wrote fresh artifacts to `output/web-game/p2-room-reaction-direct/`:
+    - `initial.json` shows the builder room already exposing a live `social.roomResponse` block for the destination shell;
+    - `after-reaction.json` confirms a placed `Jade Lantern` reports `reaction: "glow"` and `reactingTo: "Guide"` after being dropped near the guide;
+    - `summary.json` records `reactiveFurnitureCount: 1`, a live `roomReaction` summary, preserved destination shell response for the Korean Garden room, and no browser errors;
+    - `room-reaction.png` captures the room with the shell reaction layer, live chatter, and the reacting placed lantern on screen.
+
+TODO:
+- The next `P2` room-life pass should probably upgrade the NPC silhouettes so the cast reads as intentional destination characters instead of shared placeholder dolls next to the now-reactive rooms.
+- After that, a good interaction beat is giving a few furniture families short room-specific behaviors, not just shared motion tags, so a lantern, hearth, or fountain can each answer in a more world-specific way.
+
+2026-03-24:
+- Took the next `P2` room-life commitment and replaced the remaining generic room cast feel with themed NPC art across every destination room.
+- Updated `unicorn-jump/src/BuilderRoom.js`:
+  - added destination-specific NPC art profiles so each room now carries a distinct species pair plus matching accessory details instead of one shared silhouette style;
+  - kept the existing room movement and chatter runtime intact, but exposed `species` and `accessory` on the builder-room runtime snapshot so automation can verify the actual cast identity per room;
+  - preserved the live unicorn / NPC movement, speech bubbles, and reaction systems while upgrading the cast art layer underneath them.
+- Updated `unicorn-jump/scripts/verify_builder_room_npc_art.mjs`:
+  - added a dedicated browser sweep over all `9` builder room themes;
+  - recorded room screenshots plus per-room `npcArt` metadata so the verifier can confirm the cast changes room to room instead of relying on a single visual spot-check.
+- Validation after the room-NPC-art pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke verification wrote fresh artifacts to `output/web-game/p2-room-npc-art-smoke/`, confirming the builder world still opens cleanly from the main menu.
+  - Focused direct browser verification wrote fresh artifacts to `output/web-game/p2-room-npc-art-direct/`:
+    - `summary.json` records all `9` room themes, `9` distinct species families (`frog`, `owl`, `cat`, `lizard`, `lion`, `lamb`, `fox`, `bird`, `robot`), `16` accessory variants, `2` NPCs per room, and no browser errors;
+    - `future-sky-dome.png` and `mesoamerican-pyramid.png` clearly show the upgraded themed cast on screen instead of a shared placeholder pair;
+    - each room JSON now exposes `npcs[].species` and `npcs[].accessory`, which makes the cast diversity testable in text-state.
+
+TODO:
+- The next strong `P2` room-life pass is to give a few furniture families room-specific interaction beats instead of only generic motion tags, so lanterns, hearths, fountains, and sci-fi consoles answer differently.
+- If room navigation gets denser, add lightweight walk-behind / avoidance rules so the unicorn and the cast can move around larger furniture without clipping through it.

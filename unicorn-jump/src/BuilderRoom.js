@@ -130,6 +130,21 @@ const NPC_ACTOR_SIZE = {
   height: 42,
 };
 const ROOM_SOCIAL_NEAR_DISTANCE = 92;
+const ROOM_ITEM_REACTION_DISTANCE = 124;
+const ROOM_ITEM_REACTION_TYPES = {
+  lantern: 'glow',
+  lamp: 'glow',
+  torch: 'flare',
+  plate: 'twinkle',
+  recliner: 'settle',
+  stool: 'bounce',
+  gem: 'sparkle',
+  screen: 'flutter',
+  planter: 'sway',
+  table: 'hum',
+  bench: 'bounce',
+  chest: 'hum',
+};
 
 const getRoomWalkBounds = (roomWidth, roomHeight, actorWidth, actorHeight) => ({
   xMin: 12,
@@ -395,6 +410,30 @@ const getActorDistance = (left, right) => {
   return Math.hypot(leftCenter.x - rightCenter.x, leftCenter.y - rightCenter.y);
 };
 
+const getRoomReactionLabel = (reactionType) => {
+  switch (reactionType) {
+    case 'glow':
+      return 'soft glow';
+    case 'flare':
+      return 'bright flare';
+    case 'twinkle':
+      return 'table twinkle';
+    case 'settle':
+      return 'cozy settle';
+    case 'bounce':
+      return 'happy bounce';
+    case 'sparkle':
+      return 'bright sparkle';
+    case 'flutter':
+      return 'light flutter';
+    case 'sway':
+      return 'gentle sway';
+    case 'hum':
+    default:
+      return 'warm hum';
+  }
+};
+
 const getCycleItem = (items, timeMs, periodMs, phase = 0) => {
   if (!Array.isArray(items) || items.length === 0) {
     return null;
@@ -473,30 +512,107 @@ const buildRoomSocialState = (runtime, roomTheme, roomWidth, roomHeight) => {
 
   const activeNpc = socialNpcs.find((npc) => npc.nearPlayer && npc.speechText)
     || socialNpcs.find((npc) => Boolean(npc.speechText));
+  const activeLine = activeNpc
+    ? {
+        speaker: activeNpc.name,
+        text: activeNpc.speechText,
+        mood: activeNpc.mood,
+      }
+    : socialPlayer?.speechText
+      ? {
+          speaker: socialPlayer.name,
+          text: socialPlayer.speechText,
+          mood: socialPlayer.mood,
+        }
+      : null;
+  const roomResponse = buildRoomPropResponse(
+    roomTheme,
+    {
+      player: socialPlayer,
+      npcs: socialNpcs,
+      social: {
+        activeLine,
+      },
+    },
+    runtime.timeMs
+  );
 
   return {
     timeMs: runtime.timeMs,
     player: socialPlayer,
     npcs: socialNpcs,
     social: {
-      activeLine: activeNpc
-        ? {
-            speaker: activeNpc.name,
-            text: activeNpc.speechText,
-            mood: activeNpc.mood,
-          }
-        : socialPlayer?.speechText
-          ? {
-              speaker: socialPlayer.name,
-              text: socialPlayer.speechText,
-              mood: socialPlayer.mood,
-            }
-          : null,
+      activeLine,
+      roomResponse,
     },
   };
 };
 
-const buildRoomRuntimeSnapshot = (socialState) => ({
+const buildRoomReactionState = (roomItems, socialState, roomTheme) => {
+  const activeActors = [socialState.player, ...socialState.npcs].filter(
+    (actor) => actor && (actor.speechText || actor.emote)
+  );
+
+  const reactiveItems = roomItems
+    .map((item, index) => {
+      const maxDistance =
+        ROOM_ITEM_REACTION_DISTANCE + Math.min(18, Math.round((item.width + item.height) / 10));
+      const closestActor = activeActors.reduce((closest, actor) => {
+        const distance = getActorDistance(actor, item);
+        if (!closest || distance < closest.distance) {
+          return { actor, distance };
+        }
+        return closest;
+      }, null);
+
+      if (!closestActor || closestActor.distance > maxDistance) {
+        return null;
+      }
+
+      const intensity = clamp(1 - closestActor.distance / maxDistance, 0.18, 1);
+      const reaction = ROOM_ITEM_REACTION_TYPES[item.type] || 'hum';
+
+      return {
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        reaction,
+        reactionLabel: getRoomReactionLabel(reaction),
+        speaker: closestActor.actor.name,
+        mood: closestActor.actor.mood || null,
+        tone:
+          closestActor.actor.bubbleTone
+          || closestActor.actor.accentColor
+          || roomTheme?.accent
+          || '#f472b6',
+        intensity: Number(intensity.toFixed(2)),
+        distance: Math.round(closestActor.distance),
+        phaseSeed: Number((index * 0.63 + item.x * 0.011 + item.y * 0.007).toFixed(2)),
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => right.intensity - left.intensity || left.distance - right.distance);
+
+  const leadReaction = reactiveItems[0] || null;
+
+  return {
+    reactiveItems,
+    activeItemIds: reactiveItems.map((item) => item.id),
+    activeReaction: leadReaction
+      ? {
+          speaker: leadReaction.speaker,
+          itemId: leadReaction.id,
+          itemName: leadReaction.name,
+          reaction: leadReaction.reaction,
+          reactionLabel: leadReaction.reactionLabel,
+          intensity: leadReaction.intensity,
+          count: reactiveItems.length,
+        }
+      : null,
+  };
+};
+
+const buildRoomRuntimeSnapshot = (socialState, roomReactionState, roomTheme) => ({
   timeMs: socialState.timeMs,
   player: socialState.player
     ? {
@@ -513,21 +629,407 @@ const buildRoomRuntimeSnapshot = (socialState) => ({
         speechText: socialState.player.speechText,
       }
     : null,
-  npcs: socialState.npcs.map((npc) => ({
-    id: npc.id,
-    name: npc.name,
-    x: Math.round(npc.x),
-    y: Math.round(npc.y),
-    width: npc.width,
-    height: npc.height,
-    facing: npc.facing,
-    mood: npc.mood,
-    emote: npc.emote,
-    speechText: npc.speechText,
-    nearPlayer: npc.nearPlayer,
-  })),
+  npcs: socialState.npcs.map((npc) => {
+    const artProfile = getRoomNpcArtProfile(roomTheme?.id, npc.id);
+
+    return {
+      id: npc.id,
+      name: npc.name,
+      x: Math.round(npc.x),
+      y: Math.round(npc.y),
+      width: npc.width,
+      height: npc.height,
+      facing: npc.facing,
+      mood: npc.mood,
+      emote: npc.emote,
+      speechText: npc.speechText,
+      nearPlayer: npc.nearPlayer,
+      species: artProfile.species,
+      accessory: artProfile.accessory,
+    };
+  }),
   social: socialState.social,
+  reactiveItems: roomReactionState.reactiveItems.map((item) => ({
+    id: item.id,
+    name: item.name,
+    type: item.type,
+    reaction: item.reaction,
+    reactionLabel: item.reactionLabel,
+    speaker: item.speaker,
+    mood: item.mood,
+    intensity: item.intensity,
+    distance: item.distance,
+  })),
+  roomReaction: roomReactionState.activeReaction,
 });
+
+const getRoomItemReactionMotion = (reaction, timeMs) => {
+  if (!reaction) {
+    return {
+      translateY: 0,
+      rotateDeg: 0,
+      scale: 1,
+      auraOpacity: 0,
+    };
+  }
+
+  const phase = timeMs / 240 + reaction.phaseSeed;
+  const wave = Math.sin(phase);
+  const bounce = Math.abs(Math.sin(phase * 1.2));
+
+  switch (reaction.reaction) {
+    case 'sway':
+      return {
+        translateY: Number((-2.4 * reaction.intensity * (0.35 + bounce)).toFixed(2)),
+        rotateDeg: Number((wave * 3.2 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + reaction.intensity * 0.028).toFixed(3)),
+        auraOpacity: Number((0.18 + bounce * 0.18).toFixed(3)),
+      };
+    case 'bounce':
+      return {
+        translateY: Number((-4.4 * reaction.intensity * bounce).toFixed(2)),
+        rotateDeg: Number((wave * 1.4 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + bounce * reaction.intensity * 0.035).toFixed(3)),
+        auraOpacity: Number((0.16 + bounce * 0.14).toFixed(3)),
+      };
+    case 'flutter':
+      return {
+        translateY: Number((-1.6 * reaction.intensity * (wave * 0.5 + 0.5)).toFixed(2)),
+        rotateDeg: Number((wave * 2.6 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + reaction.intensity * 0.02).toFixed(3)),
+        auraOpacity: Number((0.18 + (wave * 0.5 + 0.5) * 0.14).toFixed(3)),
+      };
+    case 'sparkle':
+    case 'glow':
+    case 'flare':
+    case 'twinkle':
+      return {
+        translateY: Number((-1.2 * reaction.intensity * (wave * 0.5 + 0.5)).toFixed(2)),
+        rotateDeg: 0,
+        scale: Number((1 + (wave * 0.5 + 0.5) * reaction.intensity * 0.03).toFixed(3)),
+        auraOpacity: Number((0.22 + (wave * 0.5 + 0.5) * 0.22).toFixed(3)),
+      };
+    case 'settle':
+    case 'hum':
+    default:
+      return {
+        translateY: Number((-1.4 * reaction.intensity * (wave * 0.5 + 0.5)).toFixed(2)),
+        rotateDeg: Number((wave * 0.8 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + reaction.intensity * 0.016).toFixed(3)),
+        auraOpacity: Number((0.14 + (wave * 0.5 + 0.5) * 0.12).toFixed(3)),
+      };
+  }
+};
+
+const ROOM_REACTION_PRESETS = {
+  'korean-garden': {
+    activeProps: ['lanterns', 'pond'],
+    nodes: [
+      {
+        kind: 'glow',
+        left: '18%',
+        top: '19%',
+        width: 70,
+        height: 70,
+        fill:
+          'radial-gradient(circle at 50% 50%, rgba(255,244,201,0.98) 0%, rgba(244,180,87,0.48) 48%, rgba(244,180,87,0) 100%)',
+      },
+      {
+        kind: 'glow',
+        left: '84%',
+        top: '23%',
+        width: 70,
+        height: 70,
+        fill:
+          'radial-gradient(circle at 50% 50%, rgba(255,244,201,0.98) 0%, rgba(244,180,87,0.48) 48%, rgba(244,180,87,0) 100%)',
+      },
+      {
+        kind: 'glow',
+        left: '78%',
+        bottom: '8%',
+        width: 220,
+        height: 96,
+        fill:
+          'radial-gradient(circle at 50% 50%, rgba(180,245,255,0.72) 0%, rgba(109,186,202,0.26) 58%, rgba(109,186,202,0) 100%)',
+      },
+    ],
+  },
+  'bavarian-castle': {
+    activeProps: ['windows', 'banner glow'],
+    nodes: [
+      {
+        kind: 'glow',
+        left: '50%',
+        top: '28%',
+        width: 260,
+        height: 130,
+        fill:
+          'radial-gradient(circle at 50% 50%, rgba(238,244,255,0.92) 0%, rgba(217,203,255,0.32) 56%, rgba(217,203,255,0) 100%)',
+      },
+      {
+        kind: 'beam',
+        left: '49%',
+        top: '16%',
+        width: 200,
+        height: 56,
+        fill:
+          'linear-gradient(90deg, rgba(217,95,132,0) 0%, rgba(217,95,132,0.46) 50%, rgba(217,95,132,0) 100%)',
+      },
+    ],
+  },
+  'spanish-palace': {
+    activeProps: ['fountain', 'courtyard lamps'],
+    nodes: [
+      {
+        kind: 'glow',
+        left: '50%',
+        bottom: '14%',
+        width: 170,
+        height: 170,
+        fill:
+          'radial-gradient(circle at 50% 42%, rgba(147,232,255,0.82) 0%, rgba(28,154,183,0.24) 60%, rgba(28,154,183,0) 100%)',
+      },
+      {
+        kind: 'beam',
+        left: '50%',
+        top: '10%',
+        width: 320,
+        height: 52,
+        fill:
+          'linear-gradient(90deg, rgba(247,188,98,0) 0%, rgba(247,188,98,0.44) 50%, rgba(247,188,98,0) 100%)',
+      },
+    ],
+  },
+  'mesoamerican-pyramid': {
+    activeProps: ['torches', 'sun disc'],
+    nodes: [
+      {
+        kind: 'glow',
+        left: '18%',
+        bottom: '20%',
+        width: 96,
+        height: 140,
+        fill:
+          'radial-gradient(circle at 50% 22%, rgba(255,247,204,0.94) 0%, rgba(255,223,107,0.52) 48%, rgba(245,158,11,0) 100%)',
+      },
+      {
+        kind: 'glow',
+        left: '82%',
+        bottom: '20%',
+        width: 96,
+        height: 140,
+        fill:
+          'radial-gradient(circle at 50% 22%, rgba(255,247,204,0.94) 0%, rgba(255,223,107,0.52) 48%, rgba(245,158,11,0) 100%)',
+      },
+      {
+        kind: 'glow',
+        left: '50%',
+        top: '8%',
+        width: 170,
+        height: 170,
+        fill:
+          'radial-gradient(circle at 50% 50%, rgba(255,238,163,0.84) 0%, rgba(255,223,107,0.26) 58%, rgba(255,223,107,0) 100%)',
+      },
+    ],
+  },
+  'grecoroman-circus': {
+    activeProps: ['arena ring', 'garlands'],
+    nodes: [
+      {
+        kind: 'ring',
+        left: '50%',
+        bottom: '17%',
+        width: '78%',
+        height: 116,
+        borderColor: 'rgba(214,85,110,0.7)',
+      },
+      {
+        kind: 'beam',
+        left: '50%',
+        top: '10%',
+        width: 360,
+        height: 40,
+        fill:
+          'linear-gradient(90deg, rgba(214,85,110,0) 0%, rgba(214,85,110,0.36) 50%, rgba(214,85,110,0) 100%)',
+      },
+    ],
+  },
+  'scandinavian-longhouse': {
+    activeProps: ['hearth', 'window glow'],
+    nodes: [
+      {
+        kind: 'glow',
+        left: '50%',
+        bottom: '13%',
+        width: 190,
+        height: 190,
+        fill:
+          'radial-gradient(circle at 50% 50%, rgba(255,231,189,0.88) 0%, rgba(242,153,74,0.28) 60%, rgba(242,153,74,0) 100%)',
+      },
+      {
+        kind: 'beam',
+        left: '50%',
+        top: '22%',
+        width: 280,
+        height: 58,
+        fill:
+          'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(214,232,248,0.38) 50%, rgba(255,255,255,0) 100%)',
+      },
+    ],
+  },
+  'japanese-fortress': {
+    activeProps: ['lanterns', 'moon bridge bloom'],
+    nodes: [
+      {
+        kind: 'glow',
+        left: '14%',
+        top: '20%',
+        width: 72,
+        height: 72,
+        fill:
+          'radial-gradient(circle at 50% 50%, rgba(255,241,210,0.94) 0%, rgba(245,193,126,0.42) 52%, rgba(245,193,126,0) 100%)',
+      },
+      {
+        kind: 'glow',
+        left: '84%',
+        top: '20%',
+        width: 72,
+        height: 72,
+        fill:
+          'radial-gradient(circle at 50% 50%, rgba(255,241,210,0.94) 0%, rgba(245,193,126,0.42) 52%, rgba(245,193,126,0) 100%)',
+      },
+      {
+        kind: 'glow',
+        left: '56%',
+        bottom: '10%',
+        width: 200,
+        height: 86,
+        fill:
+          'radial-gradient(circle at 50% 50%, rgba(245,138,172,0.58) 0%, rgba(245,138,172,0.18) 58%, rgba(245,138,172,0) 100%)',
+      },
+    ],
+  },
+  'babylonian-hanging-gardens': {
+    activeProps: ['water channels', 'vine lights'],
+    nodes: [
+      {
+        kind: 'beam',
+        left: '50%',
+        top: '48%',
+        width: 260,
+        height: 48,
+        fill:
+          'linear-gradient(90deg, rgba(132,218,255,0) 0%, rgba(132,218,255,0.42) 50%, rgba(132,218,255,0) 100%)',
+      },
+      {
+        kind: 'glow',
+        left: '50%',
+        top: '30%',
+        width: 320,
+        height: 170,
+        fill:
+          'radial-gradient(circle at 50% 50%, rgba(110,211,154,0.5) 0%, rgba(70,125,109,0.16) 58%, rgba(70,125,109,0) 100%)',
+      },
+    ],
+  },
+  'future-sky-dome': {
+    activeProps: ['dome arc', 'console lights'],
+    nodes: [
+      {
+        kind: 'ring',
+        left: '50%',
+        top: '24%',
+        width: '74%',
+        height: '58%',
+        borderColor: 'rgba(133,241,255,0.74)',
+      },
+      {
+        kind: 'beam',
+        left: '50%',
+        bottom: '25%',
+        width: 240,
+        height: 56,
+        fill:
+          'linear-gradient(90deg, rgba(133,241,255,0) 0%, rgba(133,241,255,0.42) 50%, rgba(133,241,255,0) 100%)',
+      },
+    ],
+  },
+};
+
+const buildRoomPropResponse = (roomTheme, socialState, timeMs) => {
+  const preset = ROOM_REACTION_PRESETS[roomTheme?.id];
+  if (!preset) {
+    return null;
+  }
+
+  const nearbyConversation =
+    Boolean(socialState.player?.mood === 'visiting')
+    || socialState.npcs.some((npc) => npc.nearPlayer);
+  const chatterActive = Boolean(socialState.social?.activeLine);
+  const pulse = (Math.sin(timeMs / (nearbyConversation ? 180 : 320)) + 1) / 2;
+  const intensity = chatterActive
+    ? Number((0.28 + pulse * (nearbyConversation ? 0.54 : 0.22)).toFixed(3))
+    : 0;
+
+  return {
+    themeId: roomTheme.id,
+    nearbyConversation,
+    intensity,
+    activeProps: preset.activeProps,
+  };
+};
+
+const RoomThemeReactionLayer = ({ theme, reaction, timeMs }) => {
+  const preset = ROOM_REACTION_PRESETS[theme?.id];
+  if (!preset || !reaction || reaction.intensity <= 0) {
+    return null;
+  }
+
+  return (
+    <>
+      {preset.nodes.map((node, index) => {
+        const pulse = 0.92 + ((Math.sin(timeMs / (210 + index * 50)) + 1) / 2) * 0.18;
+        const sharedStyle = {
+          position: 'absolute',
+          left: node.left,
+          top: node.top,
+          bottom: node.bottom,
+          width: node.width,
+          height: node.height,
+          transform: `translate(-50%, ${node.top ? '-50%' : '50%'}) scale(${pulse})`,
+          opacity: reaction.intensity * (node.baseOpacity || 1),
+          pointerEvents: 'none',
+        };
+
+        if (node.kind === 'ring') {
+          return (
+            <div
+              key={`room-reaction-${theme.id}-${index}`}
+              style={{
+                ...sharedStyle,
+                borderRadius: '50%',
+                border: `3px solid ${node.borderColor}`,
+                boxShadow: `0 0 24px ${node.borderColor}`,
+              }}
+            />
+          );
+        }
+
+        return (
+          <div
+            key={`room-reaction-${theme.id}-${index}`}
+            style={{
+              ...sharedStyle,
+              borderRadius: '50%',
+              background: node.fill,
+              filter: node.kind === 'beam' ? 'blur(10px)' : 'blur(8px)',
+            }}
+          />
+        );
+      })}
+    </>
+  );
+};
 
 const RoomActorBubble = ({ actor, playerActor = false }) => {
   const showSpeech = Boolean(actor.speechText);
@@ -656,8 +1158,498 @@ const UnicornActorArt = ({ actor, timeMs }) => {
   );
 };
 
-const RoomNpcArt = ({ actor, timeMs }) => {
+const ROOM_NPC_ART_PROFILES = {
+  default: {
+    guide: {
+      species: 'frog',
+      primary: '#8ed4a0',
+      secondary: '#5f9b75',
+      cream: '#f4fbef',
+      detail: '#ffd56c',
+      accessory: 'lantern',
+    },
+    friend: {
+      species: 'frog',
+      primary: '#b3ebc0',
+      secondary: '#78b38d',
+      cream: '#f6fcf2',
+      detail: '#a7f0e5',
+      accessory: 'leaf',
+    },
+  },
+  'korean-garden': {
+    guide: {
+      species: 'frog',
+      primary: '#88d39c',
+      secondary: '#4e896c',
+      cream: '#f4fbef',
+      detail: '#ffd56c',
+      accessory: 'lantern',
+    },
+    friend: {
+      species: 'frog',
+      primary: '#afe9bc',
+      secondary: '#74ae87',
+      cream: '#f7fcf4',
+      detail: '#a7f0e5',
+      accessory: 'leaf',
+    },
+  },
+  'bavarian-castle': {
+    guide: {
+      species: 'owl',
+      primary: '#c5cafc',
+      secondary: '#7380bf',
+      cream: '#fff4ea',
+      detail: '#d95f84',
+      accessory: 'badge',
+    },
+    friend: {
+      species: 'owl',
+      primary: '#ead7f5',
+      secondary: '#9b79b2',
+      cream: '#fff7ee',
+      detail: '#f7d482',
+      accessory: 'bow',
+    },
+  },
+  'spanish-palace': {
+    guide: {
+      species: 'cat',
+      primary: '#ffcb92',
+      secondary: '#d17a46',
+      cream: '#fff2e5',
+      detail: '#1c9ab7',
+      accessory: 'flower',
+    },
+    friend: {
+      species: 'cat',
+      primary: '#ffd7e5',
+      secondary: '#d9778d',
+      cream: '#fff5ef',
+      detail: '#ffb35c',
+      accessory: 'fan',
+    },
+  },
+  'mesoamerican-pyramid': {
+    guide: {
+      species: 'lizard',
+      primary: '#78c86d',
+      secondary: '#4a8742',
+      cream: '#f7efc9',
+      detail: '#ffdf6b',
+      accessory: 'sun',
+    },
+    friend: {
+      species: 'lizard',
+      primary: '#94d8b0',
+      secondary: '#4f9a7f',
+      cream: '#eef9dd',
+      detail: '#f59e0b',
+      accessory: 'feather',
+    },
+  },
+  'grecoroman-circus': {
+    guide: {
+      species: 'lion',
+      primary: '#f7ca74',
+      secondary: '#ca8c48',
+      cream: '#fff0c9',
+      detail: '#d6556e',
+      accessory: 'laurel',
+    },
+    friend: {
+      species: 'lion',
+      primary: '#f3dcff',
+      secondary: '#a27ac0',
+      cream: '#fff5dd',
+      detail: '#ffe0a3',
+      accessory: 'ribbon',
+    },
+  },
+  'scandinavian-longhouse': {
+    guide: {
+      species: 'lamb',
+      primary: '#f7efe5',
+      secondary: '#c7ae96',
+      cream: '#ffffff',
+      detail: '#f2994a',
+      accessory: 'scarf',
+    },
+    friend: {
+      species: 'lamb',
+      primary: '#f3e2d2',
+      secondary: '#9d7758',
+      cream: '#fff8f2',
+      detail: '#d2e8f5',
+      accessory: 'bell',
+    },
+  },
+  'japanese-fortress': {
+    guide: {
+      species: 'fox',
+      primary: '#ffe6d7',
+      secondary: '#d5845c',
+      cream: '#fff8f2',
+      detail: '#f58aac',
+      accessory: 'ribbon',
+    },
+    friend: {
+      species: 'fox',
+      primary: '#fff1e8',
+      secondary: '#ba6d55',
+      cream: '#fffaf7',
+      detail: '#ffd5e3',
+      accessory: 'blossom',
+    },
+  },
+  'babylonian-hanging-gardens': {
+    guide: {
+      species: 'bird',
+      primary: '#73d9a2',
+      secondary: '#4c836f',
+      cream: '#fef7de',
+      detail: '#ffd76b',
+      accessory: 'vine',
+    },
+    friend: {
+      species: 'bird',
+      primary: '#ffdcb4',
+      secondary: '#cb8f4c',
+      cream: '#fff6e6',
+      detail: '#ff9ec0',
+      accessory: 'flower',
+    },
+  },
+  'future-sky-dome': {
+    guide: {
+      species: 'robot',
+      primary: '#d9e9ff',
+      secondary: '#7095d9',
+      cream: '#f7fbff',
+      detail: '#85f1ff',
+      accessory: 'visor',
+    },
+    friend: {
+      species: 'robot',
+      primary: '#c9d5ff',
+      secondary: '#5268bd',
+      cream: '#f8fcff',
+      detail: '#ffffff',
+      accessory: 'halo',
+    },
+  },
+};
+
+const getRoomNpcArtProfile = (roomThemeId, actorId) => {
+  const themeProfiles = ROOM_NPC_ART_PROFILES[roomThemeId] || ROOM_NPC_ART_PROFILES.default;
+  return actorId === 'npc-guide' ? themeProfiles.guide : themeProfiles.friend;
+};
+
+const RoomNpcEyes = ({ blink, outline, leftX, rightX, y = 20, size = 1.8 }) =>
+  blink ? (
+    <>
+      <path d={`M${leftX - 2} ${y} Q${leftX} ${y - 1.1} ${leftX + 2} ${y}`} fill="none" stroke={outline} strokeWidth="1.8" strokeLinecap="round" />
+      <path d={`M${rightX - 2} ${y} Q${rightX} ${y - 1.1} ${rightX + 2} ${y}`} fill="none" stroke={outline} strokeWidth="1.8" strokeLinecap="round" />
+    </>
+  ) : (
+    <>
+      <circle cx={leftX} cy={y} r={size} fill={outline} />
+      <circle cx={rightX} cy={y} r={size} fill={outline} />
+    </>
+  );
+
+const RoomNpcAccessory = ({ accessory, detail, outline }) => {
+  switch (accessory) {
+    case 'lantern':
+      return (
+        <g>
+          <path d="M37 35 Q44 34 48 38" fill="none" stroke={outline} strokeWidth="2.2" strokeLinecap="round" />
+          <rect x="46" y="38" width="8" height="10" rx="4" fill={detail} stroke={outline} strokeWidth="2" />
+        </g>
+      );
+    case 'leaf':
+      return <path d="M23 8 Q30 2 37 8 Q31 14 23 8 Z" fill={detail} stroke={outline} strokeWidth="2" />;
+    case 'badge':
+      return (
+        <g>
+          <circle cx="30" cy="42" r="5" fill={detail} stroke={outline} strokeWidth="2" />
+          <path d="M27 46 L24 53" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+          <path d="M33 46 L36 53" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+        </g>
+      );
+    case 'bow':
+      return (
+        <g>
+          <path d="M22 37 Q16 34 18 29 Q24 30 27 35 Z" fill={detail} stroke={outline} strokeWidth="2" />
+          <path d="M38 37 Q44 34 42 29 Q36 30 33 35 Z" fill={detail} stroke={outline} strokeWidth="2" />
+          <circle cx="30" cy="36" r="3" fill={detail} stroke={outline} strokeWidth="1.8" />
+        </g>
+      );
+    case 'flower':
+      return (
+        <g>
+          {[0, 72, 144, 216, 288].map((angle) => (
+            <ellipse
+              key={angle}
+              cx="40"
+              cy="12"
+              rx="3"
+              ry="5"
+              fill={detail}
+              stroke={outline}
+              strokeWidth="1.5"
+              transform={`rotate(${angle} 40 12)`}
+            />
+          ))}
+          <circle cx="40" cy="12" r="2.3" fill="#fff8d1" stroke={outline} strokeWidth="1.2" />
+        </g>
+      );
+    case 'fan':
+      return <path d="M39 37 Q51 33 52 45 Q43 47 39 37 Z" fill={detail} stroke={outline} strokeWidth="2" />;
+    case 'sun':
+      return (
+        <g>
+          <circle cx="30" cy="8" r="4.8" fill={detail} stroke={outline} strokeWidth="2" />
+          {[0, 60, 120, 180, 240, 300].map((angle) => (
+            <path
+              key={angle}
+              d="M30 1 L30 -4"
+              stroke={outline}
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              transform={`rotate(${angle} 30 8)`}
+            />
+          ))}
+        </g>
+      );
+    case 'feather':
+      return <path d="M22 8 Q30 0 38 6 Q32 14 22 8 Z" fill={detail} stroke={outline} strokeWidth="2" />;
+    case 'laurel':
+      return (
+        <g>
+          <path d="M19 14 Q23 7 28 7" fill="none" stroke={detail} strokeWidth="3" strokeLinecap="round" />
+          <path d="M41 14 Q37 7 32 7" fill="none" stroke={detail} strokeWidth="3" strokeLinecap="round" />
+          <path d="M22 12 L18 9" stroke={detail} strokeWidth="2" strokeLinecap="round" />
+          <path d="M38 12 L42 9" stroke={detail} strokeWidth="2" strokeLinecap="round" />
+        </g>
+      );
+    case 'ribbon':
+      return (
+        <g>
+          <path d="M24 36 L19 44" stroke={detail} strokeWidth="4" strokeLinecap="round" />
+          <path d="M36 36 L41 44" stroke={detail} strokeWidth="4" strokeLinecap="round" />
+          <circle cx="30" cy="35" r="3.4" fill={detail} stroke={outline} strokeWidth="1.7" />
+        </g>
+      );
+    case 'scarf':
+      return <path d="M21 36 Q30 40 39 36 L37 42 Q30 45 23 42 Z" fill={detail} stroke={outline} strokeWidth="2" />;
+    case 'bell':
+      return (
+        <g>
+          <path d="M21 36 Q30 39 39 36" fill="none" stroke={detail} strokeWidth="3" strokeLinecap="round" />
+          <circle cx="30" cy="41" r="3.8" fill={detail} stroke={outline} strokeWidth="1.8" />
+        </g>
+      );
+    case 'blossom':
+      return (
+        <g>
+          {[0, 90, 180, 270].map((angle) => (
+            <ellipse
+              key={angle}
+              cx="19"
+              cy="14"
+              rx="2.6"
+              ry="4.4"
+              fill={detail}
+              stroke={outline}
+              strokeWidth="1.2"
+              transform={`rotate(${angle} 19 14)`}
+            />
+          ))}
+          <circle cx="19" cy="14" r="1.7" fill="#fff7c9" />
+        </g>
+      );
+    case 'vine':
+      return <path d="M18 12 Q30 5 42 12" fill="none" stroke={detail} strokeWidth="3" strokeLinecap="round" />;
+    case 'visor':
+      return <rect x="19" y="15" width="22" height="8" rx="4" fill={`${detail}bb`} stroke={outline} strokeWidth="2" />;
+    case 'halo':
+      return <ellipse cx="30" cy="7" rx="10" ry="4" fill="none" stroke={detail} strokeWidth="2.5" />;
+    default:
+      return null;
+  }
+};
+
+const renderFrogNpc = ({ profile, outline, blink }) => (
+  <>
+    <circle cx="21" cy="14" r="5.5" fill={profile.primary} stroke={outline} strokeWidth="2.2" />
+    <circle cx="39" cy="14" r="5.5" fill={profile.primary} stroke={outline} strokeWidth="2.2" />
+    <ellipse cx="30" cy="24" rx="16" ry="13" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+    <ellipse cx="30" cy="47" rx="17" ry="15" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+    <ellipse cx="30" cy="49" rx="9.5" ry="11" fill={profile.cream} opacity="0.96" />
+    <ellipse cx="18" cy="42" rx="5" ry="8.5" fill={profile.secondary} opacity="0.88" />
+    <ellipse cx="42" cy="42" rx="5" ry="8.5" fill={profile.secondary} opacity="0.88" />
+    <ellipse cx="22" cy="61" rx="4.6" ry="7.2" fill={profile.secondary} />
+    <ellipse cx="38" cy="61" rx="4.6" ry="7.2" fill={profile.secondary} />
+    <ellipse cx="30" cy="31" rx="7.5" ry="6" fill={profile.secondary} opacity="0.18" />
+    <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={22} size={1.9} />
+    <path d="M25 28 Q30 31 35 28" fill="none" stroke={outline} strokeWidth="2.2" strokeLinecap="round" />
+  </>
+);
+
+const renderOwlNpc = ({ profile, outline, blink }) => (
+  <>
+    <path d="M17 15 L23 9 L26 18 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    <path d="M43 15 L37 9 L34 18 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    <circle cx="30" cy="21" r="12.5" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+    <path d="M17 35 Q30 28 43 35 L46 58 Q30 68 14 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+    <ellipse cx="20" cy="43" rx="5.5" ry="11" fill={profile.secondary} opacity="0.9" />
+    <ellipse cx="40" cy="43" rx="5.5" ry="11" fill={profile.secondary} opacity="0.9" />
+    <ellipse cx="30" cy="45" rx="9" ry="12" fill={profile.cream} opacity="0.96" />
+    <path d="M27 25 L30 28 L33 25" fill={profile.detail} stroke={outline} strokeWidth="1.8" strokeLinejoin="round" />
+    <RoomNpcEyes blink={blink} outline={outline} leftX={25} rightX={35} y={20} size={2.1} />
+    <path d="M26 30 Q30 33 34 30" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+    <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+  </>
+);
+
+const renderCatFoxNpc = ({ profile, outline, blink, fox = false }) => (
+  <>
+    <path d={fox ? 'M44 39 Q56 37 54 55 Q48 65 36 60 Q44 53 42 45 Z' : 'M44 41 Q55 40 54 53 Q50 63 40 60 Q45 52 44 45 Z'} fill={profile.secondary} stroke={outline} strokeWidth="2.4" />
+    <path d="M18 16 L24 7 L27 19 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    <path d="M42 16 L36 7 L33 19 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    <circle cx="30" cy="21" r="11.8" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+    <path d="M18 36 Q30 29 42 36 L45 58 Q30 67 15 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+    <ellipse cx="30" cy="46" rx="8.5" ry="11" fill={profile.cream} />
+    <ellipse cx="30" cy="27" rx="7.2" ry="5.4" fill={profile.cream} />
+    <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={21} size={1.9} />
+    <path d="M27 28 Q30 30 33 28" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+    <path d="M24 26 L20 24" stroke={outline} strokeWidth="1.4" strokeLinecap="round" />
+    <path d="M36 26 L40 24" stroke={outline} strokeWidth="1.4" strokeLinecap="round" />
+    <rect x="23" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <rect x="32" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+  </>
+);
+
+const renderLizardNpc = ({ profile, outline, blink }) => (
+  <>
+    <path d="M44 42 Q57 42 55 57 Q46 61 38 56 Q45 50 44 42 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    <path d="M19 12 L24 6 L27 16 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+    <path d="M26 10 L30 3 L34 10 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+    <path d="M33 12 L36 6 L41 12 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+    <ellipse cx="30" cy="20" rx="13" ry="10.5" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
+    <ellipse cx="30" cy="43" rx="16" ry="11.5" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
+    <ellipse cx="30" cy="44" rx="8.5" ry="9" fill={profile.cream} opacity="0.92" />
+    <ellipse cx="19" cy="43" rx="4.5" ry="8.5" fill={profile.secondary} />
+    <ellipse cx="41" cy="43" rx="4.5" ry="8.5" fill={profile.secondary} />
+    <RoomNpcEyes blink={blink} outline={outline} leftX={25} rightX={35} y={19} size={1.7} />
+    <path d="M26 25 Q30 29 34 25" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+    <rect x="22" y="54" width="5" height="11" rx="2.5" fill={profile.secondary} />
+    <rect x="33" y="54" width="5" height="11" rx="2.5" fill={profile.secondary} />
+  </>
+);
+
+const renderLionNpc = ({ profile, outline, blink }) => (
+  <>
+    <path d="M44 42 Q55 42 54 56 Q49 62 40 59 Q45 52 44 46 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    <circle cx="30" cy="20" r="14.5" fill={profile.secondary} stroke={outline} strokeWidth="2.4" />
+    <circle cx="30" cy="20" r="9.6" fill={profile.primary} stroke={outline} strokeWidth="2.2" />
+    <path d="M17 36 Q30 29 43 36 L45 58 Q30 68 15 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+    <ellipse cx="30" cy="46" rx="8.5" ry="10.5" fill={profile.cream} />
+    <circle cx="22" cy="12" r="3.8" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
+    <circle cx="38" cy="12" r="3.8" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
+    <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={20} size={1.9} />
+    <path d="M27 27 Q30 30 33 27" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+    <rect x="23" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <rect x="32" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+  </>
+);
+
+const renderLambNpc = ({ profile, outline, blink }) => (
+  <>
+    {[20, 30, 40].map((cx) => (
+      <circle key={`head-puff-${cx}`} cx={cx} cy="17" r="7.4" fill={profile.primary} stroke={outline} strokeWidth="1.8" />
+    ))}
+    <ellipse cx="19" cy="20" rx="3.2" ry="7" fill={profile.secondary} stroke={outline} strokeWidth="1.6" />
+    <ellipse cx="41" cy="20" rx="3.2" ry="7" fill={profile.secondary} stroke={outline} strokeWidth="1.6" />
+    <ellipse cx="30" cy="22" rx="9" ry="8" fill={profile.cream} stroke={outline} strokeWidth="2" />
+    {[18, 26, 34, 42].map((cx) => (
+      <circle key={`body-puff-${cx}`} cx={cx} cy="45" r="8.5" fill={profile.primary} stroke={outline} strokeWidth="1.8" />
+    ))}
+    <ellipse cx="30" cy="46" rx="11" ry="10" fill={profile.cream} opacity="0.96" />
+    <RoomNpcEyes blink={blink} outline={outline} leftX={26} rightX={34} y={21} size={1.6} />
+    <path d="M27 27 Q30 29 33 27" fill="none" stroke={outline} strokeWidth="1.8" strokeLinecap="round" />
+    <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+  </>
+);
+
+const renderBirdNpc = ({ profile, outline, blink }) => (
+  <>
+    <path d="M18 15 L24 8 L27 18 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+    <path d="M42 15 L36 8 L33 18 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+    <path d="M44 40 Q56 39 54 54 Q47 64 36 60 Q44 53 43 46 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    <circle cx="30" cy="20" r="11.6" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
+    <path d="M17 36 Q30 28 43 36 L46 58 Q30 68 14 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+    <path d="M18 41 Q24 34 27 52" fill={profile.secondary} opacity="0.9" />
+    <path d="M42 41 Q36 34 33 52" fill={profile.secondary} opacity="0.9" />
+    <ellipse cx="30" cy="45" rx="8.5" ry="11.2" fill={profile.cream} opacity="0.96" />
+    <path d="M27 25 L30 28 L33 25" fill={profile.detail} stroke={outline} strokeWidth="1.6" strokeLinejoin="round" />
+    <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={20} size={1.9} />
+    <path d="M26 30 Q30 33 34 30" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+    <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+  </>
+);
+
+const renderRobotNpc = ({ profile, outline, blink }) => (
+  <>
+    <path d="M30 4 L30 10" stroke={outline} strokeWidth="2.4" strokeLinecap="round" />
+    <circle cx="30" cy="4" r="2.8" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+    <rect x="18" y="12" width="24" height="18" rx="8" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
+    <rect x="19" y="34" width="22" height="24" rx="10" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
+    <rect x="23" y="39" width="14" height="8" rx="4" fill={profile.cream} opacity="0.9" />
+    <circle cx="16" cy="41" r="4" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
+    <circle cx="44" cy="41" r="4" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
+    <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <path d="M22 30 L18 35" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+    <path d="M38 30 L42 35" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+    <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={21} size={1.7} />
+    <path d="M27 26 Q30 28 33 26" fill="none" stroke={outline} strokeWidth="1.8" strokeLinecap="round" />
+  </>
+);
+
+const RoomNpcArt = ({ actor, timeMs, roomTheme }) => {
   const blink = Math.sin(timeMs / 420 + actor.phase) > 0.94;
+  const profile = getRoomNpcArtProfile(roomTheme?.id, actor.id);
+  const outline = actor.accentColor;
+
+  const renderNpcFigure = () => {
+    switch (profile.species) {
+      case 'owl':
+        return renderOwlNpc({ profile, outline, blink });
+      case 'cat':
+        return renderCatFoxNpc({ profile, outline, blink });
+      case 'lizard':
+        return renderLizardNpc({ profile, outline, blink });
+      case 'lion':
+        return renderLionNpc({ profile, outline, blink });
+      case 'lamb':
+        return renderLambNpc({ profile, outline, blink });
+      case 'fox':
+        return renderCatFoxNpc({ profile, outline, blink, fox: true });
+      case 'bird':
+        return renderBirdNpc({ profile, outline, blink });
+      case 'robot':
+        return renderRobotNpc({ profile, outline, blink });
+      case 'frog':
+      default:
+        return renderFrogNpc({ profile, outline, blink });
+    }
+  };
 
   return (
     <div
@@ -688,17 +1680,12 @@ const RoomNpcArt = ({ actor, timeMs }) => {
         style={{
           display: 'block',
           overflow: 'visible',
-          filter: 'drop-shadow(0 6px 8px rgba(15, 23, 42, 0.12))',
+          filter: 'drop-shadow(0 7px 9px rgba(15, 23, 42, 0.14))',
         }}
       >
-        <circle cx="30" cy="18" r="11" fill="#fff7ef" stroke={actor.accentColor} strokeWidth="3" />
-        <path d="M18 34 Q30 26 42 34 L46 58 Q30 68 14 58 Z" fill={actor.bodyColor} stroke={actor.accentColor} strokeWidth="3" />
-        <path d="M24 12 Q30 4 36 12" fill="none" stroke={actor.accentColor} strokeWidth="3" strokeLinecap="round" />
-        <circle cx="26" cy="18" r="1.8" fill={actor.accentColor} opacity={blink ? 0.2 : 1} />
-        <circle cx="34" cy="18" r="1.8" fill={actor.accentColor} opacity={blink ? 0.2 : 1} />
-        <path d="M25 23 Q30 27 35 23" fill="none" stroke={actor.accentColor} strokeWidth="2.5" strokeLinecap="round" />
-        <rect x="23" y="58" width="5" height="10" rx="2.5" fill={actor.accentColor} />
-        <rect x="32" y="58" width="5" height="10" rx="2.5" fill={actor.accentColor} />
+        {renderNpcFigure()}
+        <RoomNpcAccessory accessory={profile.accessory} detail={profile.detail} outline={outline} />
+        <path d="M18 30 Q30 25 42 30" fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="3" strokeLinecap="round" />
         <circle cx="45" cy="24" r="4" fill={actor.glowColor} opacity="0.86" />
       </svg>
     </div>
@@ -1620,14 +2607,20 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
   const runtimeIdentity = `${houseId}:${roomWidth}:${roomHeight}:${roomTheme?.id || 'room'}`;
   const roomRuntimeRef = useRef(createInitialRoomRuntime(roomWidth, roomHeight));
   const [roomRuntime, setRoomRuntime] = useState(() => createInitialRoomRuntime(roomWidth, roomHeight));
+  const roomItems = [...(house?.room?.items ?? [])].sort((left, right) => left.y - right.y);
   const roomSocialState = buildRoomSocialState(
     roomRuntime,
     roomTheme,
     roomWidth,
     roomHeight
   );
+  const roomReactionState = buildRoomReactionState(roomItems, roomSocialState, roomTheme);
   const npcActors = roomSocialState.npcs;
-  const roomRuntimeSnapshot = buildRoomRuntimeSnapshot(roomSocialState);
+  const roomRuntimeSnapshot = buildRoomRuntimeSnapshot(
+    roomSocialState,
+    roomReactionState,
+    roomTheme
+  );
   const roomActors = [
     ...npcActors.map((actor) => ({
       ...actor,
@@ -1642,7 +2635,9 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
   ]
     .filter(Boolean)
     .sort((left, right) => left.y - right.y);
-  const roomItems = [...(house?.room?.items ?? [])].sort((left, right) => left.y - right.y);
+  const reactiveItemMap = new Map(
+    roomReactionState.reactiveItems.map((item) => [item.id, item])
+  );
   const introPlayer = createInitialRoomRuntime(roomWidth, roomHeight).player;
   const playerHasStartedMoving = roomRuntime.player
     ? Math.hypot(
@@ -1695,22 +2690,14 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
       return undefined;
     }
 
-    const snapshot = buildRoomRuntimeSnapshot(
-      buildRoomSocialState(
-        roomRuntimeRef.current,
-        roomTheme,
-        roomWidth,
-        roomHeight
-      )
-    );
-    window.__builderRoomRuntime = snapshot;
+    window.__builderRoomRuntime = roomRuntimeSnapshot;
 
     return () => {
-      if (window.__builderRoomRuntime === snapshot) {
+      if (window.__builderRoomRuntime === roomRuntimeSnapshot) {
         window.__builderRoomRuntime = undefined;
       }
     };
-  }, [roomRuntimeSnapshot, roomTheme, roomWidth, roomHeight]);
+  }, [roomRuntimeSnapshot]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -2110,9 +3097,19 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                     }}
                   />
                   <RoomThemeScene theme={roomTheme} />
+                  <RoomThemeReactionLayer
+                    theme={roomTheme}
+                    reaction={roomSocialState.social?.roomResponse}
+                    timeMs={roomRuntime.timeMs}
+                  />
 
                   {roomItems.map((item) => {
                     const isDragged = dragState?.source === 'room' && dragState.item.id === item.id;
+                    const itemReaction = isDragged ? null : reactiveItemMap.get(item.id) || null;
+                    const reactionMotion = getRoomItemReactionMotion(
+                      itemReaction,
+                      roomRuntime.timeMs
+                    );
 
                     return (
                       <button
@@ -2132,11 +3129,31 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                           background: 'transparent',
                           cursor: 'grab',
                           opacity: isDragged ? 0.18 : 1,
+                          transform: `translateY(${reactionMotion.translateY}px) rotate(${reactionMotion.rotateDeg}deg) scale(${reactionMotion.scale})`,
+                          transformOrigin: '50% 80%',
+                          filter: itemReaction
+                            ? `drop-shadow(0 0 ${10 + itemReaction.intensity * 14}px ${itemReaction.tone}55)`
+                            : 'none',
+                          transition: 'transform 80ms linear, filter 80ms linear, opacity 120ms ease',
                           touchAction: 'none',
                           userSelect: 'none',
                         }}
                         aria-label={`Move ${item.name}`}
                       >
+                        {itemReaction && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              inset: -10,
+                              borderRadius: 28,
+                              background: `radial-gradient(circle at 50% 54%, ${itemReaction.tone}55 0%, ${itemReaction.tone}16 38%, transparent 72%)`,
+                              opacity: reactionMotion.auraOpacity,
+                              transform: `scale(${1 + itemReaction.intensity * 0.08})`,
+                              filter: 'blur(5px)',
+                              pointerEvents: 'none',
+                            }}
+                          />
+                        )}
                         <FurnitureArt item={item} />
                       </button>
                     );
@@ -2159,7 +3176,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                       {actor.kind === 'player' ? (
                         <UnicornActorArt actor={actor} timeMs={roomRuntime.timeMs} />
                       ) : (
-                        <RoomNpcArt actor={actor} timeMs={roomRuntime.timeMs} />
+                        <RoomNpcArt actor={actor} timeMs={roomRuntime.timeMs} roomTheme={roomTheme} />
                       )}
                     </div>
                   ))}
@@ -2315,6 +3332,43 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
               </div>
               <div style={{ fontSize: 15, lineHeight: 1.34 }}>
                 {roomSocialState.social?.activeLine?.text || 'The room is settled and waiting for the next hello.'}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.62)',
+                borderRadius: 24,
+                padding: '18px 18px',
+                display: 'grid',
+                gap: 8,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: 1.2,
+                  textTransform: 'uppercase',
+                  opacity: 0.72,
+                }}
+              >
+                Room Echo
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 800, opacity: 0.72 }}>
+                {roomReactionState.activeReaction?.speaker || 'Quiet decor'}
+              </div>
+              <div style={{ fontSize: 15, lineHeight: 1.34 }}>
+                {roomReactionState.activeReaction
+                  ? `${roomReactionState.activeReaction.itemName} answers with ${roomReactionState.activeReaction.reactionLabel}.`
+                  : roomItems.length === 0
+                    ? 'Add a room piece near the cast to wake the room.'
+                    : 'Move a room piece near the cast to wake the room.'}
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.72 }}>
+                {roomReactionState.activeReaction
+                  ? `${roomReactionState.activeReaction.count} piece${roomReactionState.activeReaction.count === 1 ? '' : 's'} answer right now.`
+                  : 'Nearby voices can stir lamps, seats, plants, and bright little treasures.'}
               </div>
             </div>
 
