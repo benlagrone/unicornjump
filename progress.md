@@ -1447,6 +1447,28 @@ TODO:
 - The next `P2` room-life pass should either make furniture / props react to nearby NPC chatter or upgrade the NPC art silhouettes so the cast feels less placeholder-simple next to the improved rooms.
 
 2026-03-24:
+- Took the next `P2` room-art commitment and replaced the generic NPC placeholder figures with theme-aware character silhouettes.
+- Updated `unicorn-jump/src/BuilderRoom.js`:
+  - added a room-NPC art profile matrix keyed by room theme and role, so each destination now gets a distinct cast family instead of the same recolored figure;
+  - implemented multiple silhouette families inside the room renderer: frog spirits, owls, cats, lizards, lions, lambs, fox spirits, garden birds, and starbots;
+  - added role accessories so guides and friends read differently even within the same family, for example lantern vs leaf, ribbon vs blossom, visor vs halo.
+- Added focused verification helpers under `unicorn-jump/scripts/`:
+  - `verify_builder_room_social.mjs` for a full room-entry plus nearby-social flow;
+  - `verify_builder_room_npc_art.mjs` for one screenshot per house theme across the full `P2` destination set.
+- Validation after the NPC art pass:
+  - `npm run build` passed.
+  - Required shared web-game client verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-npc-art-smoke/`, confirming the builder world still opens cleanly from the main menu after the room art change.
+  - Focused direct room-social verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-npc-social-check/`, confirming the Korean room still supports the same live chatter flow after the art swap.
+  - Focused multi-theme art verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-npc-art-direct/`:
+    - `korean-garden.png` shows the new frog spirit family;
+    - `japanese-fortress.png` shows the fox spirit family;
+    - `future-sky-dome.png` shows the starbot family;
+    - the remaining destination captures confirm the rest of the themed cast families render without browser errors.
+
+TODO:
+- The next `P2` room-art pass should probably push animation depth on these new cast families: tail flicks, ear twitches, wing beats, or accessory sway so the improved silhouettes feel as alive as the room backgrounds.
+
+2026-03-24:
 - Took the next `P2` room-life commitment and let the rooms answer the cast instead of keeping all the motion on the NPC bubbles.
 - Updated `unicorn-jump/src/BuilderRoom.js`:
   - added deterministic room-reaction state so placed furniture can answer nearby speech / emotes with type-specific motion like glow, sway, bounce, flutter, and sparkle;
@@ -1488,3 +1510,65 @@ TODO:
 TODO:
 - The next strong `P2` room-life pass is to give a few furniture families room-specific interaction beats instead of only generic motion tags, so lanterns, hearths, fountains, and sci-fi consoles answer differently.
 - If room navigation gets denser, add lightweight walk-behind / avoidance rules so the unicorn and the cast can move around larger furniture without clipping through it.
+
+2026-03-30:
+- Took the next `P2` room-life commitment and pushed furniture reactions past shared motion tags into named beat families.
+- Updated `unicorn-jump/src/BuilderRoom.js`:
+  - added a room-furniture beat map on top of the existing generic reaction types, so certain tray families now answer with specific behaviors like `lantern-bloom`, `sun-flare`, `hearth-fire`, `tea-steam`, `console-scan`, and `vine-song`;
+  - added beat-specific motion tuning plus visual overlays, so the response is not only text-state metadata: lanterns now bloom with soft rings, torches flare with ember motion, tea tables breathe steam curls, consoles sweep scan bars, and planters sway with bloom accents;
+  - updated the `Room Echo` panel so it reports the active beat label instead of only the generic reaction tag.
+- Updated `unicorn-jump/src/App.js`:
+  - expanded builder-room furniture text-state with `reactionBeat` and `reactionBeatLabel` so automation can distinguish beat families directly from `render_game_to_text()`.
+- Validation after the room-beat pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke verification wrote fresh artifacts to `output/web-game/p2-room-beat-smoke/`, confirming the builder world still opens cleanly from the main menu after the beat-layer changes.
+  - Focused direct browser verification wrote fresh artifacts to `output/web-game/p2-room-beat-direct/` and `output/web-game/p2-room-beat-sun/`:
+    - `output/web-game/p2-room-beat-direct/korean-lantern-after.json` confirms `Jade Lantern` now reports `reactionBeat: "lantern-bloom"` while reacting to the guide in the Korean room;
+    - `output/web-game/p2-room-beat-sun/summary.json` confirms `Sun Torch` now reports `beat: "sun-flare"` in the MesoAmerican room with no browser errors;
+    - both runs preserve live room shell response and cast chatter while the furniture beat stays active.
+  - Automation note:
+    - the current Playwright drag path is reliable for first tray items, but later sidebar items were flaky to place through pure mouse automation in this layout; if later verification needs deep tray coverage, consider exposing a test helper for builder-room placement rather than fighting the sidebar drag path.
+
+TODO:
+- The next strong `P2` room-life pass should probably shift to lightweight walk-behind / avoidance rules so the unicorn and cast can move around larger furniture without clipping.
+- After that, if we keep deepening room reactions, add a few one-shot interaction beats on top of these looping beat families so props can answer with more than a continuous ambient pulse.
+
+2026-03-30:
+- Took the next `P2` room-life commitment and finished the missing room-specific furniture beats so the remaining decor families no longer fall back to generic motion.
+- Updated `unicorn-jump/src/BuilderRoom.js`:
+  - expanded the room reaction beat catalog to cover fruit plates, recliners, stools, benches, and chests in addition to the earlier lantern / torch / planter / gem / console set;
+  - added new visual overlays and motion tuning for those families, including fruit orbits, seat sighs, orbit drift, stool hops, bench thrums, and story-chime / lock-glint chest accents;
+  - kept the existing `Room Echo` panel wired to the strongest active piece, so the sidebar now reports these new beat labels directly.
+- Kept builder-room text-state aligned with the new pass:
+  - furniture entries continue to expose their live reaction beat data through `render_game_to_text()`, which makes the new family-specific behaviors testable in automation.
+- Added focused verification under `unicorn-jump/scripts/verify_builder_room_furniture_beats.mjs`:
+  - this sweep drops one signature piece in each of `5` rooms and confirms the expected beat metadata comes back from the live room runtime.
+- Validation after the room-furniture-beats pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-furniture-beats-smoke/`, confirming the builder world still opens cleanly from the main menu after the new beat work.
+  - Focused direct browser verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-furniture-beats-direct/`:
+    - `summary.json` records successful beat checks for `Persimmon Fruit Plate`, `Carved Chest`, `Tile Bench`, `Stone Stool`, and `Orbit Recliner`;
+    - `korean-plate.png` shows the new plate-family beat in the Moon Gate Garden room;
+    - `future-recliner.png` shows the new recliner-family beat in the Nova Dome Lounge room;
+    - all `5` cases report the expected beat id / label with no browser errors.
+
+TODO:
+- The next strong `P2` room-life pass is to animate the themed NPC families more deeply, for example tail flicks, ear twitches, wing beats, or accessory sway so the new cast silhouettes feel as alive as the furniture.
+- If room navigation gets denser, add lightweight walk-behind / avoidance rules so the unicorn and the cast can move around larger furniture without clipping through it.
+
+2026-03-30:
+- Took the next `P2` room-art commitment and added a motion-depth pass to the new themed NPC families so the cast no longer reads as static cutouts inside the upgraded destination rooms.
+- Updated `unicorn-jump/src/BuilderRoom.js`:
+  - added `getRoomNpcMotionPose(...)` and `getNpcBodyTransform(...)` so each cast family gets a deterministic idle motion profile keyed by species, role, and room time;
+  - upgraded the themed NPC renderers so frogs squash gently, owls lift wings and ear tufts, foxes and cats sway tails and flick ears, lizards flex crests and tails, lions swing tails, lambs flop ears, birds beat wings, and robots bounce antennae and arms;
+  - pushed the same motion data into `RoomNpcAccessory(...)`, so lanterns, fans, flowers, halos, visors, ribbons, vines, and other room props now bob with the bodies instead of feeling pinned on.
+- Validation after the room-NPC-motion pass:
+  - `npm run build` passed.
+  - Required shared web-game client verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-npc-motion-smoke/`.
+  - Focused direct browser verification wrote fresh artifacts to:
+    - `unicorn-jump/output/web-game/p2-room-npc-motion-social-check/`, where `summary.json` confirms the Korean Garden room still exposes live cast identity (`frog` + `lantern` / `leaf`) with no browser errors;
+    - `unicorn-jump/output/web-game/p2-room-npc-motion-art-direct/`, where `summary.json` confirms all `9` destination rooms still resolve the correct themed species and accessory families with no browser errors, and the refreshed screenshots show the cast in their new posed silhouettes.
+
+TODO:
+- The next strongest `P2` art pass is to scale and deepen the room cast one more step so those themed NPCs read more hero-like against the now-richer room shells.
+- After that, the best follow-up is making a few theme-specific furniture families animate in character-specific ways instead of only sharing the generic room motion layer.

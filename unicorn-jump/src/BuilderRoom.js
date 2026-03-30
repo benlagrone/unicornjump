@@ -434,6 +434,51 @@ const getRoomReactionLabel = (reactionType) => {
   }
 };
 
+const ROOM_ITEM_REACTION_BEATS = {
+  'jade-lantern': { beat: 'lantern-bloom', label: 'lantern bloom' },
+  'paper-lantern': { beat: 'lantern-bloom', label: 'lantern bloom' },
+  'banner-torch': { beat: 'banner-flare', label: 'banner flare' },
+  'sun-torch': { beat: 'sun-flare', label: 'sun flare' },
+  'hearth-torch': { beat: 'hearth-fire', label: 'hearth fire' },
+  'halo-torch': { beat: 'halo-signal', label: 'halo signal' },
+  'tea-floor-table': { beat: 'tea-steam', label: 'tea steam' },
+  'starlight-console': { beat: 'console-scan', label: 'console scan' },
+  'persimmon-fruit-plate': { beat: 'fruit-orbit', label: 'persimmon twinkle' },
+  'citrus-fruit-plate': { beat: 'fruit-orbit', label: 'citrus twinkle' },
+  'grape-fruit-plate': { beat: 'fruit-orbit', label: 'grape twinkle' },
+  'royal-fruit-plate': { beat: 'fruit-orbit', label: 'royal twinkle' },
+  'velvet-recliner': { beat: 'seat-sigh', label: 'velvet sigh' },
+  'sun-recliner': { beat: 'seat-sigh', label: 'sun lounge sigh' },
+  'marble-chaise': { beat: 'seat-sigh', label: 'marble sigh' },
+  'garden-recliner': { beat: 'seat-sigh', label: 'garden sigh' },
+  'orbit-recliner': { beat: 'orbit-drift', label: 'orbit drift' },
+  'stone-stool': { beat: 'stool-hop', label: 'stone hop' },
+  'wooden-stool': { beat: 'stool-hop', label: 'hearth hop' },
+  'lacquer-stool': { beat: 'stool-hop', label: 'lacquer hop' },
+  'tile-bench': { beat: 'bench-thrum', label: 'courtyard thrum' },
+  'timber-bench': { beat: 'bench-thrum', label: 'timber thrum' },
+  'carved-chest': { beat: 'story-chime', label: 'story chime' },
+  'hanging-vine-planter': { beat: 'vine-song', label: 'vine song' },
+};
+
+const ROOM_ITEM_DEFAULT_BEATS = {
+  lantern: { beat: 'lantern-sway', label: 'lantern sway' },
+  torch: { beat: 'ember-flare', label: 'ember flare' },
+  table: { beat: 'table-hum', label: 'table hum' },
+  plate: { beat: 'fruit-orbit', label: 'fruit twinkle' },
+  recliner: { beat: 'seat-sigh', label: 'cushion sigh' },
+  stool: { beat: 'stool-hop', label: 'stool hop' },
+  bench: { beat: 'bench-thrum', label: 'bench thrum' },
+  chest: { beat: 'lock-glint', label: 'lock glint' },
+  planter: { beat: 'vine-song', label: 'vine song' },
+  gem: { beat: 'gem-spark', label: 'gem spark' },
+};
+
+const getRoomItemReactionBeat = (item) =>
+  ROOM_ITEM_REACTION_BEATS[item.typeId]
+  || ROOM_ITEM_DEFAULT_BEATS[item.type]
+  || { beat: 'room-hum', label: 'room hum' };
+
 const getCycleItem = (items, timeMs, periodMs, phase = 0) => {
   if (!Array.isArray(items) || items.length === 0) {
     return null;
@@ -571,13 +616,17 @@ const buildRoomReactionState = (roomItems, socialState, roomTheme) => {
 
       const intensity = clamp(1 - closestActor.distance / maxDistance, 0.18, 1);
       const reaction = ROOM_ITEM_REACTION_TYPES[item.type] || 'hum';
+      const reactionBeat = getRoomItemReactionBeat(item);
 
       return {
         id: item.id,
         name: item.name,
+        typeId: item.typeId,
         type: item.type,
         reaction,
         reactionLabel: getRoomReactionLabel(reaction),
+        beat: reactionBeat.beat,
+        beatLabel: reactionBeat.label,
         speaker: closestActor.actor.name,
         mood: closestActor.actor.mood || null,
         tone:
@@ -605,6 +654,8 @@ const buildRoomReactionState = (roomItems, socialState, roomTheme) => {
           itemName: leadReaction.name,
           reaction: leadReaction.reaction,
           reactionLabel: leadReaction.reactionLabel,
+          beat: leadReaction.beat,
+          beatLabel: leadReaction.beatLabel,
           intensity: leadReaction.intensity,
           count: reactiveItems.length,
         }
@@ -652,9 +703,12 @@ const buildRoomRuntimeSnapshot = (socialState, roomReactionState, roomTheme) => 
   reactiveItems: roomReactionState.reactiveItems.map((item) => ({
     id: item.id,
     name: item.name,
+    typeId: item.typeId,
     type: item.type,
     reaction: item.reaction,
     reactionLabel: item.reactionLabel,
+    beat: item.beat,
+    beatLabel: item.beatLabel,
     speaker: item.speaker,
     mood: item.mood,
     intensity: item.intensity,
@@ -676,6 +730,93 @@ const getRoomItemReactionMotion = (reaction, timeMs) => {
   const phase = timeMs / 240 + reaction.phaseSeed;
   const wave = Math.sin(phase);
   const bounce = Math.abs(Math.sin(phase * 1.2));
+
+  switch (reaction.beat) {
+    case 'lantern-bloom':
+      return {
+        translateY: Number((-2.1 * reaction.intensity * (0.55 + bounce)).toFixed(2)),
+        rotateDeg: Number((wave * 1.9 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + (wave * 0.5 + 0.5) * reaction.intensity * 0.038).toFixed(3)),
+        auraOpacity: Number((0.26 + (wave * 0.5 + 0.5) * 0.24).toFixed(3)),
+      };
+    case 'hearth-fire':
+    case 'sun-flare':
+    case 'banner-flare':
+    case 'halo-signal':
+      return {
+        translateY: Number((-1.4 * reaction.intensity * (wave * 0.5 + 0.5)).toFixed(2)),
+        rotateDeg: Number((wave * 0.9 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + bounce * reaction.intensity * 0.032).toFixed(3)),
+        auraOpacity: Number((0.24 + bounce * 0.24).toFixed(3)),
+      };
+    case 'tea-steam':
+      return {
+        translateY: Number((-1.8 * reaction.intensity * (wave * 0.5 + 0.5)).toFixed(2)),
+        rotateDeg: Number((wave * 0.5 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + reaction.intensity * 0.018).toFixed(3)),
+        auraOpacity: Number((0.18 + (wave * 0.5 + 0.5) * 0.14).toFixed(3)),
+      };
+    case 'console-scan':
+      return {
+        translateY: 0,
+        rotateDeg: 0,
+        scale: Number((1 + (wave * 0.5 + 0.5) * reaction.intensity * 0.012).toFixed(3)),
+        auraOpacity: Number((0.2 + (wave * 0.5 + 0.5) * 0.18).toFixed(3)),
+      };
+    case 'vine-song':
+      return {
+        translateY: Number((-2.6 * reaction.intensity * (0.45 + bounce)).toFixed(2)),
+        rotateDeg: Number((wave * 3.8 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + reaction.intensity * 0.024).toFixed(3)),
+        auraOpacity: Number((0.18 + bounce * 0.16).toFixed(3)),
+      };
+    case 'gem-spark':
+      return {
+        translateY: Number((-1.3 * reaction.intensity * (wave * 0.5 + 0.5)).toFixed(2)),
+        rotateDeg: 0,
+        scale: Number((1 + (wave * 0.5 + 0.5) * reaction.intensity * 0.034).toFixed(3)),
+        auraOpacity: Number((0.24 + (wave * 0.5 + 0.5) * 0.2).toFixed(3)),
+      };
+    case 'fruit-orbit':
+      return {
+        translateY: Number((-1.2 * reaction.intensity * (wave * 0.5 + 0.5)).toFixed(2)),
+        rotateDeg: Number((wave * 1.2 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + (wave * 0.5 + 0.5) * reaction.intensity * 0.025).toFixed(3)),
+        auraOpacity: Number((0.2 + (wave * 0.5 + 0.5) * 0.18).toFixed(3)),
+      };
+    case 'seat-sigh':
+      return {
+        translateY: Number((-1.8 * reaction.intensity * (wave * 0.5 + 0.5)).toFixed(2)),
+        rotateDeg: Number((wave * 0.7 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + reaction.intensity * 0.018 + bounce * reaction.intensity * 0.014).toFixed(3)),
+        auraOpacity: Number((0.16 + (wave * 0.5 + 0.5) * 0.14).toFixed(3)),
+      };
+    case 'orbit-drift':
+      return {
+        translateY: Number((-2 * reaction.intensity * (wave * 0.5 + 0.5)).toFixed(2)),
+        rotateDeg: Number((wave * 1.4 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + reaction.intensity * 0.02 + (wave * 0.5 + 0.5) * reaction.intensity * 0.015).toFixed(3)),
+        auraOpacity: Number((0.18 + (wave * 0.5 + 0.5) * 0.18).toFixed(3)),
+      };
+    case 'stool-hop':
+    case 'bench-thrum':
+      return {
+        translateY: Number((-3.2 * reaction.intensity * bounce).toFixed(2)),
+        rotateDeg: Number((wave * 1.1 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + bounce * reaction.intensity * 0.028).toFixed(3)),
+        auraOpacity: Number((0.16 + bounce * 0.16).toFixed(3)),
+      };
+    case 'story-chime':
+    case 'lock-glint':
+      return {
+        translateY: Number((-1 * reaction.intensity * (wave * 0.5 + 0.5)).toFixed(2)),
+        rotateDeg: Number((wave * 0.6 * reaction.intensity).toFixed(2)),
+        scale: Number((1 + reaction.intensity * 0.014).toFixed(3)),
+        auraOpacity: Number((0.18 + (wave * 0.5 + 0.5) * 0.16).toFixed(3)),
+      };
+    default:
+      break;
+  }
 
   switch (reaction.reaction) {
     case 'sway':
@@ -719,6 +860,361 @@ const getRoomItemReactionMotion = (reaction, timeMs) => {
         auraOpacity: Number((0.14 + (wave * 0.5 + 0.5) * 0.12).toFixed(3)),
       };
   }
+};
+
+const RoomFurnitureReactionLayer = ({ item, reaction, timeMs }) => {
+  if (!reaction) {
+    return null;
+  }
+
+  const phase = timeMs / 220 + reaction.phaseSeed;
+  const wave = (Math.sin(phase) + 1) / 2;
+  const rise = (Math.sin(phase * 1.35) + 1) / 2;
+  const sharedStyle = {
+    position: 'absolute',
+    inset: 0,
+    pointerEvents: 'none',
+  };
+
+  if (reaction.beat === 'lantern-bloom' || reaction.beat === 'lantern-sway') {
+    return (
+      <div style={sharedStyle}>
+        {[0, 1].map((index) => (
+          <div
+            key={`${item.id}-lantern-ring-${index}`}
+            style={{
+              position: 'absolute',
+              left: `${22 - index * 4}%`,
+              right: `${22 - index * 4}%`,
+              top: `${12 - index * 4}%`,
+              bottom: `${28 - index * 2}%`,
+              borderRadius: 24 + index * 6,
+              border: `2px solid ${reaction.tone}${index === 0 ? '88' : '44'}`,
+              opacity: 0.18 + wave * 0.26 - index * 0.08,
+              transform: `scale(${1 + wave * 0.08 + index * 0.04})`,
+            }}
+          />
+        ))}
+        {[20, 50, 78].map((left, index) => (
+          <div
+            key={`${item.id}-lantern-dust-${left}`}
+            style={{
+              position: 'absolute',
+              left: `${left}%`,
+              top: `${18 + index * 10}%`,
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: index === 1 ? item.color : reaction.tone,
+              opacity: 0.26 + rise * 0.34,
+              transform: `translate(-50%, ${-6 - rise * 10 - index * 3}px) scale(${0.85 + wave * 0.4})`,
+              boxShadow: `0 0 10px ${reaction.tone}88`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (
+    reaction.beat === 'banner-flare'
+    || reaction.beat === 'sun-flare'
+    || reaction.beat === 'hearth-fire'
+    || reaction.beat === 'halo-signal'
+    || reaction.beat === 'ember-flare'
+  ) {
+    const flareColor = reaction.beat === 'halo-signal' ? '#b7e6ff' : '#fff3b0';
+
+    return (
+      <div style={sharedStyle}>
+        <div
+          style={{
+            position: 'absolute',
+            left: '26%',
+            right: '26%',
+            top: '2%',
+            height: '34%',
+            borderRadius: '50% 50% 42% 42%',
+            background: `radial-gradient(circle at 50% 26%, #ffffff 0%, ${flareColor} 44%, ${reaction.tone} 100%)`,
+            opacity: 0.24 + wave * 0.34,
+            transform: `scale(${0.92 + wave * 0.2}) translateY(${-2 - wave * 2}px)`,
+            filter: 'blur(1px)',
+          }}
+        />
+        {[16, 44, 72].map((left, index) => (
+          <div
+            key={`${item.id}-ember-${left}`}
+            style={{
+              position: 'absolute',
+              left: `${left}%`,
+              top: `${10 + index * 8}%`,
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: index === 1 ? '#fff8d8' : reaction.tone,
+              opacity: 0.16 + rise * 0.34,
+              transform: `translate(-50%, ${-8 - rise * 18 - index * 4}px) scale(${0.8 + wave * 0.35})`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (reaction.beat === 'tea-steam') {
+    return (
+      <div style={sharedStyle}>
+        {[24, 44, 64].map((left, index) => (
+          <div
+            key={`${item.id}-steam-${left}`}
+            style={{
+              position: 'absolute',
+              left: `${left}%`,
+              bottom: '42%',
+              width: 12,
+              height: '34%',
+              borderRadius: 999,
+              border: `2px solid ${reaction.tone}`,
+              borderLeft: 'none',
+              borderBottom: 'none',
+              opacity: 0.12 + wave * 0.22,
+              transform: `translate(-50%, ${-4 - rise * 18 - index * 3}px) rotate(${index === 1 ? 0 : index === 0 ? -16 : 16}deg)`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (reaction.beat === 'console-scan') {
+    return (
+      <div style={sharedStyle}>
+        <div
+          style={{
+            position: 'absolute',
+            left: '10%',
+            right: '10%',
+            top: `${18 + wave * 14}%`,
+            height: '16%',
+            borderRadius: 10,
+            background: `linear-gradient(90deg, transparent 0%, ${reaction.tone}44 26%, ${reaction.tone}aa 50%, ${reaction.tone}44 74%, transparent 100%)`,
+            opacity: 0.28 + wave * 0.32,
+            boxShadow: `0 0 12px ${reaction.tone}66`,
+          }}
+        />
+        {[18, 40, 62, 80].map((left, index) => (
+          <div
+            key={`${item.id}-console-node-${left}`}
+            style={{
+              position: 'absolute',
+              left: `${left}%`,
+              top: `${56 + (index % 2) * 8}%`,
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: index % 2 === 0 ? item.color : reaction.tone,
+              opacity: 0.22 + ((index + Math.round(wave * 4)) % 2 === 0 ? 0.48 : 0.12),
+              boxShadow: `0 0 10px ${reaction.tone}88`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (reaction.beat === 'vine-song') {
+    return (
+      <div style={sharedStyle}>
+        {[26, 48, 70].map((left, index) => (
+          <div
+            key={`${item.id}-vine-song-${left}`}
+            style={{
+              position: 'absolute',
+              left: `${left}%`,
+              top: `${6 + index * 4}%`,
+              width: 12,
+              height: '54%',
+              borderRadius: 999,
+              background: index === 1 ? item.accent : item.color,
+              opacity: 0.18 + wave * 0.18,
+              transform: `translateX(-50%) rotate(${(index - 1) * 7 + Math.sin(phase + index) * 7}deg)`,
+              transformOrigin: 'top center',
+            }}
+          />
+        ))}
+        {[18, 52, 78].map((left, index) => (
+          <div
+            key={`${item.id}-vine-bloom-${left}`}
+            style={{
+              position: 'absolute',
+              left: `${left}%`,
+              top: `${20 + index * 12}%`,
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: index === 1 ? '#fff5d8' : reaction.tone,
+              opacity: 0.16 + rise * 0.28,
+              transform: `translate(-50%, ${-2 - rise * 6}px) scale(${0.8 + wave * 0.35})`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (reaction.beat === 'gem-spark') {
+    return (
+      <div style={sharedStyle}>
+        {[0, 1, 2].map((index) => (
+          <div
+            key={`${item.id}-gem-spark-${index}`}
+            style={{
+              position: 'absolute',
+              left: `${22 + index * 24}%`,
+              top: `${14 + index * 10}%`,
+              width: 10,
+              height: 10,
+              borderRadius: 3,
+              background: index === 1 ? '#ffffff' : reaction.tone,
+              opacity: 0.18 + wave * 0.34,
+              transform: `translate(-50%, ${-3 - rise * 8}px) rotate(${45 + index * 12}deg) scale(${0.8 + wave * 0.4})`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (reaction.beat === 'fruit-orbit') {
+    return (
+      <div style={sharedStyle}>
+        {[0, 1, 2].map((index) => {
+          const angle = phase + index * ((Math.PI * 2) / 3);
+          const orbitX = Math.cos(angle) * 16;
+          const orbitY = Math.sin(angle) * 7;
+
+          return (
+            <div
+              key={`${item.id}-fruit-orbit-${index}`}
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: '38%',
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: index === 1 ? '#fff7da' : reaction.tone,
+                opacity: 0.2 + wave * 0.28,
+                boxShadow: `0 0 10px ${reaction.tone}88`,
+                transform: `translate(${orbitX}px, ${orbitY - 4}px) scale(${0.8 + wave * 0.28})`,
+              }}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (reaction.beat === 'seat-sigh' || reaction.beat === 'orbit-drift') {
+    return (
+      <div style={sharedStyle}>
+        <div
+          style={{
+            position: 'absolute',
+            left: '18%',
+            right: '18%',
+            top: reaction.beat === 'orbit-drift' ? '8%' : '22%',
+            height: reaction.beat === 'orbit-drift' ? '62%' : '26%',
+            borderRadius: reaction.beat === 'orbit-drift' ? '50%' : 18,
+            border: `2px solid ${reaction.tone}66`,
+            opacity: 0.16 + wave * 0.2,
+            transform:
+              reaction.beat === 'orbit-drift'
+                ? `rotate(${phase * 12}deg) scale(${0.94 + wave * 0.08})`
+                : `scale(${0.96 + wave * 0.04})`,
+          }}
+        />
+        {[0, 1].map((index) => (
+          <div
+            key={`${item.id}-seat-sigh-${index}`}
+            style={{
+              position: 'absolute',
+              left: `${24 + index * 24}%`,
+              top: `${42 + index * 8}%`,
+              width: '24%',
+              height: '10%',
+              borderRadius: 999,
+              background: `${reaction.tone}${index === 0 ? '40' : '24'}`,
+              opacity: 0.18 + wave * 0.16,
+              transform: `translateY(${-2 - rise * 5 - index * 2}px)`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (reaction.beat === 'stool-hop' || reaction.beat === 'bench-thrum') {
+    return (
+      <div style={sharedStyle}>
+        {[0, 1].map((index) => (
+          <div
+            key={`${item.id}-bench-thrum-${index}`}
+            style={{
+              position: 'absolute',
+              left: `${18 + index * 26}%`,
+              right: `${18 + (1 - index) * 14}%`,
+              bottom: `${8 + index * 10}%`,
+              height: 10,
+              borderRadius: 999,
+              border: `2px solid ${reaction.tone}${index === 0 ? '88' : '55'}`,
+              opacity: 0.14 + rise * 0.24 - index * 0.04,
+              transform: `scale(${1 + rise * 0.08 + index * 0.04})`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (reaction.beat === 'story-chime' || reaction.beat === 'lock-glint') {
+    return (
+      <div style={sharedStyle}>
+        <div
+          style={{
+            position: 'absolute',
+            left: '48%',
+            top: '20%',
+            width: 6,
+            height: '48%',
+            borderRadius: 999,
+            background: `linear-gradient(180deg, transparent 0%, ${reaction.tone} 50%, transparent 100%)`,
+            opacity: 0.18 + wave * 0.32,
+            transform: `translateX(-50%) scaleY(${0.8 + wave * 0.28})`,
+            boxShadow: `0 0 10px ${reaction.tone}88`,
+          }}
+        />
+        {[22, 50, 78].map((left, index) => (
+          <div
+            key={`${item.id}-story-chime-${left}`}
+            style={{
+              position: 'absolute',
+              left: `${left}%`,
+              top: `${18 + index * 10}%`,
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: index === 1 ? '#fff7d6' : reaction.tone,
+              opacity: 0.16 + rise * 0.26,
+              transform: `translate(-50%, ${-4 - rise * 10 - index * 2}px) scale(${0.82 + wave * 0.24})`,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return null;
 };
 
 const ROOM_REACTION_PRESETS = {
@@ -1346,6 +1842,64 @@ const getRoomNpcArtProfile = (roomThemeId, actorId) => {
   return actorId === 'npc-guide' ? themeProfiles.guide : themeProfiles.friend;
 };
 
+const getRoomNpcMotionPose = (profile, actor, timeMs) => {
+  const moodBoost =
+    actor.mood === 'chatty' ? 1.18 : actor.nearPlayer ? 1.1 : actor.mood === 'wandering' ? 0.92 : 1;
+  const phase = timeMs / 260 + actor.phase * 4.4 + (actor.id === 'npc-friend' ? 1.2 : 0);
+  const wave = Math.sin(phase);
+  const quick = Math.sin(phase * 1.7);
+  const bounce = Math.abs(Math.sin(phase * 1.35));
+
+  return {
+    bodyScaleX: Number((1 - wave * 0.018 * moodBoost).toFixed(3)),
+    bodyScaleY: Number((1 + wave * 0.026 * moodBoost).toFixed(3)),
+    tailDeg: Number(
+      (
+        wave *
+        ({
+          fox: 16,
+          cat: 11,
+          lion: 12,
+          lizard: 18,
+          bird: 10,
+        }[profile.species] || 0) *
+        moodBoost
+      ).toFixed(2)
+    ),
+    earDeg: Number(
+      (
+        quick *
+        ({
+          fox: 8,
+          cat: 7,
+          owl: 6,
+          lamb: 8,
+        }[profile.species] || 0) *
+        moodBoost
+      ).toFixed(2)
+    ),
+    wingLift: Number(
+      (
+        bounce *
+        ({
+          owl: 5.4,
+          bird: 6.2,
+        }[profile.species] || 0) *
+        moodBoost
+      ).toFixed(2)
+    ),
+    accessoryY: Number((quick * 2.4 * moodBoost).toFixed(2)),
+    accessoryDeg: Number((wave * 7 * moodBoost).toFixed(2)),
+    crestDeg: Number((wave * 10 * moodBoost).toFixed(2)),
+    antennaDeg: Number((quick * 12 * moodBoost).toFixed(2)),
+    haloScale: Number((1 + bounce * 0.08 * moodBoost).toFixed(3)),
+    robotArmY: Number((bounce * 2.4 * moodBoost).toFixed(2)),
+  };
+};
+
+const getNpcBodyTransform = (motion, centerX = 30, centerY = 44) =>
+  `translate(${centerX} ${centerY}) scale(${motion.bodyScaleX} ${motion.bodyScaleY}) translate(${-centerX} ${-centerY})`;
+
 const RoomNpcEyes = ({ blink, outline, leftX, rightX, y = 20, size = 1.8 }) =>
   blink ? (
     <>
@@ -1359,20 +1913,24 @@ const RoomNpcEyes = ({ blink, outline, leftX, rightX, y = 20, size = 1.8 }) =>
     </>
   );
 
-const RoomNpcAccessory = ({ accessory, detail, outline }) => {
+const RoomNpcAccessory = ({ accessory, detail, outline, motion }) => {
   switch (accessory) {
     case 'lantern':
       return (
-        <g>
+        <g transform={`rotate(${motion.accessoryDeg} 47 38) translate(0 ${motion.accessoryY})`}>
           <path d="M37 35 Q44 34 48 38" fill="none" stroke={outline} strokeWidth="2.2" strokeLinecap="round" />
           <rect x="46" y="38" width="8" height="10" rx="4" fill={detail} stroke={outline} strokeWidth="2" />
         </g>
       );
     case 'leaf':
-      return <path d="M23 8 Q30 2 37 8 Q31 14 23 8 Z" fill={detail} stroke={outline} strokeWidth="2" />;
+      return (
+        <g transform={`rotate(${motion.crestDeg} 30 8)`}>
+          <path d="M23 8 Q30 2 37 8 Q31 14 23 8 Z" fill={detail} stroke={outline} strokeWidth="2" />
+        </g>
+      );
     case 'badge':
       return (
-        <g>
+        <g transform={`translate(0 ${motion.accessoryY * 0.5})`}>
           <circle cx="30" cy="42" r="5" fill={detail} stroke={outline} strokeWidth="2" />
           <path d="M27 46 L24 53" stroke={outline} strokeWidth="2" strokeLinecap="round" />
           <path d="M33 46 L36 53" stroke={outline} strokeWidth="2" strokeLinecap="round" />
@@ -1380,7 +1938,7 @@ const RoomNpcAccessory = ({ accessory, detail, outline }) => {
       );
     case 'bow':
       return (
-        <g>
+        <g transform={`translate(0 ${motion.accessoryY * 0.4}) rotate(${motion.accessoryDeg * 0.45} 30 35)`}>
           <path d="M22 37 Q16 34 18 29 Q24 30 27 35 Z" fill={detail} stroke={outline} strokeWidth="2" />
           <path d="M38 37 Q44 34 42 29 Q36 30 33 35 Z" fill={detail} stroke={outline} strokeWidth="2" />
           <circle cx="30" cy="36" r="3" fill={detail} stroke={outline} strokeWidth="1.8" />
@@ -1388,7 +1946,7 @@ const RoomNpcAccessory = ({ accessory, detail, outline }) => {
       );
     case 'flower':
       return (
-        <g>
+        <g transform={`rotate(${motion.crestDeg} 40 12)`}>
           {[0, 72, 144, 216, 288].map((angle) => (
             <ellipse
               key={angle}
@@ -1406,10 +1964,14 @@ const RoomNpcAccessory = ({ accessory, detail, outline }) => {
         </g>
       );
     case 'fan':
-      return <path d="M39 37 Q51 33 52 45 Q43 47 39 37 Z" fill={detail} stroke={outline} strokeWidth="2" />;
+      return (
+        <g transform={`rotate(${motion.accessoryDeg * 0.9} 40 38) translate(0 ${motion.accessoryY})`}>
+          <path d="M39 37 Q51 33 52 45 Q43 47 39 37 Z" fill={detail} stroke={outline} strokeWidth="2" />
+        </g>
+      );
     case 'sun':
       return (
-        <g>
+        <g transform={`rotate(${motion.crestDeg} 30 8)`}>
           <circle cx="30" cy="8" r="4.8" fill={detail} stroke={outline} strokeWidth="2" />
           {[0, 60, 120, 180, 240, 300].map((angle) => (
             <path
@@ -1424,10 +1986,14 @@ const RoomNpcAccessory = ({ accessory, detail, outline }) => {
         </g>
       );
     case 'feather':
-      return <path d="M22 8 Q30 0 38 6 Q32 14 22 8 Z" fill={detail} stroke={outline} strokeWidth="2" />;
+      return (
+        <g transform={`rotate(${motion.crestDeg} 30 8)`}>
+          <path d="M22 8 Q30 0 38 6 Q32 14 22 8 Z" fill={detail} stroke={outline} strokeWidth="2" />
+        </g>
+      );
     case 'laurel':
       return (
-        <g>
+        <g transform={`translate(0 ${motion.accessoryY * 0.35})`}>
           <path d="M19 14 Q23 7 28 7" fill="none" stroke={detail} strokeWidth="3" strokeLinecap="round" />
           <path d="M41 14 Q37 7 32 7" fill="none" stroke={detail} strokeWidth="3" strokeLinecap="round" />
           <path d="M22 12 L18 9" stroke={detail} strokeWidth="2" strokeLinecap="round" />
@@ -1436,24 +2002,28 @@ const RoomNpcAccessory = ({ accessory, detail, outline }) => {
       );
     case 'ribbon':
       return (
-        <g>
+        <g transform={`translate(0 ${motion.accessoryY * 0.35}) rotate(${motion.accessoryDeg * 0.4} 30 36)`}>
           <path d="M24 36 L19 44" stroke={detail} strokeWidth="4" strokeLinecap="round" />
           <path d="M36 36 L41 44" stroke={detail} strokeWidth="4" strokeLinecap="round" />
           <circle cx="30" cy="35" r="3.4" fill={detail} stroke={outline} strokeWidth="1.7" />
         </g>
       );
     case 'scarf':
-      return <path d="M21 36 Q30 40 39 36 L37 42 Q30 45 23 42 Z" fill={detail} stroke={outline} strokeWidth="2" />;
+      return (
+        <g transform={`translate(0 ${motion.accessoryY * 0.45})`}>
+          <path d="M21 36 Q30 40 39 36 L37 42 Q30 45 23 42 Z" fill={detail} stroke={outline} strokeWidth="2" />
+        </g>
+      );
     case 'bell':
       return (
-        <g>
+        <g transform={`translate(0 ${motion.accessoryY * 0.4})`}>
           <path d="M21 36 Q30 39 39 36" fill="none" stroke={detail} strokeWidth="3" strokeLinecap="round" />
           <circle cx="30" cy="41" r="3.8" fill={detail} stroke={outline} strokeWidth="1.8" />
         </g>
       );
     case 'blossom':
       return (
-        <g>
+        <g transform={`rotate(${motion.crestDeg} 19 14)`}>
           {[0, 90, 180, 270].map((angle) => (
             <ellipse
               key={angle}
@@ -1471,154 +2041,224 @@ const RoomNpcAccessory = ({ accessory, detail, outline }) => {
         </g>
       );
     case 'vine':
-      return <path d="M18 12 Q30 5 42 12" fill="none" stroke={detail} strokeWidth="3" strokeLinecap="round" />;
+      return (
+        <g transform={`translate(0 ${motion.accessoryY * 0.2})`}>
+          <path d="M18 12 Q30 5 42 12" fill="none" stroke={detail} strokeWidth="3" strokeLinecap="round" />
+        </g>
+      );
     case 'visor':
-      return <rect x="19" y="15" width="22" height="8" rx="4" fill={`${detail}bb`} stroke={outline} strokeWidth="2" />;
+      return (
+        <g transform={`translate(0 ${motion.accessoryY * 0.15})`}>
+          <rect x="19" y="15" width="22" height="8" rx="4" fill={`${detail}bb`} stroke={outline} strokeWidth="2" />
+        </g>
+      );
     case 'halo':
-      return <ellipse cx="30" cy="7" rx="10" ry="4" fill="none" stroke={detail} strokeWidth="2.5" />;
+      return (
+        <g transform={`translate(0 ${motion.accessoryY * 0.4}) scale(${motion.haloScale} ${motion.haloScale})`}>
+          <ellipse cx="30" cy="7" rx="10" ry="4" fill="none" stroke={detail} strokeWidth="2.5" />
+        </g>
+      );
     default:
       return null;
   }
 };
 
-const renderFrogNpc = ({ profile, outline, blink }) => (
+const renderFrogNpc = ({ profile, outline, blink, motion }) => (
   <>
-    <circle cx="21" cy="14" r="5.5" fill={profile.primary} stroke={outline} strokeWidth="2.2" />
-    <circle cx="39" cy="14" r="5.5" fill={profile.primary} stroke={outline} strokeWidth="2.2" />
-    <ellipse cx="30" cy="24" rx="16" ry="13" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
-    <ellipse cx="30" cy="47" rx="17" ry="15" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
-    <ellipse cx="30" cy="49" rx="9.5" ry="11" fill={profile.cream} opacity="0.96" />
-    <ellipse cx="18" cy="42" rx="5" ry="8.5" fill={profile.secondary} opacity="0.88" />
-    <ellipse cx="42" cy="42" rx="5" ry="8.5" fill={profile.secondary} opacity="0.88" />
-    <ellipse cx="22" cy="61" rx="4.6" ry="7.2" fill={profile.secondary} />
-    <ellipse cx="38" cy="61" rx="4.6" ry="7.2" fill={profile.secondary} />
-    <ellipse cx="30" cy="31" rx="7.5" ry="6" fill={profile.secondary} opacity="0.18" />
-    <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={22} size={1.9} />
-    <path d="M25 28 Q30 31 35 28" fill="none" stroke={outline} strokeWidth="2.2" strokeLinecap="round" />
+    <g transform={`translate(30 15) rotate(${motion.crestDeg * 0.2}) translate(-30 -15)`}>
+      <circle cx="21" cy="14" r="5.5" fill={profile.primary} stroke={outline} strokeWidth="2.2" />
+      <circle cx="39" cy="14" r="5.5" fill={profile.primary} stroke={outline} strokeWidth="2.2" />
+    </g>
+    <g transform={getNpcBodyTransform(motion)}>
+      <ellipse cx="30" cy="24" rx="16" ry="13" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+      <ellipse cx="30" cy="47" rx="17" ry="15" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+      <ellipse cx="30" cy="49" rx="9.5" ry="11" fill={profile.cream} opacity="0.96" />
+      <ellipse cx="18" cy="42" rx="5" ry="8.5" fill={profile.secondary} opacity="0.88" />
+      <ellipse cx="42" cy="42" rx="5" ry="8.5" fill={profile.secondary} opacity="0.88" />
+      <ellipse cx="22" cy="61" rx="4.6" ry="7.2" fill={profile.secondary} />
+      <ellipse cx="38" cy="61" rx="4.6" ry="7.2" fill={profile.secondary} />
+      <ellipse cx="30" cy="31" rx="7.5" ry="6" fill={profile.secondary} opacity="0.18" />
+      <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={22} size={1.9} />
+      <path d="M25 28 Q30 31 35 28" fill="none" stroke={outline} strokeWidth="2.2" strokeLinecap="round" />
+    </g>
   </>
 );
 
-const renderOwlNpc = ({ profile, outline, blink }) => (
+const renderOwlNpc = ({ profile, outline, blink, motion }) => (
   <>
-    <path d="M17 15 L23 9 L26 18 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
-    <path d="M43 15 L37 9 L34 18 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
-    <circle cx="30" cy="21" r="12.5" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
-    <path d="M17 35 Q30 28 43 35 L46 58 Q30 68 14 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
-    <ellipse cx="20" cy="43" rx="5.5" ry="11" fill={profile.secondary} opacity="0.9" />
-    <ellipse cx="40" cy="43" rx="5.5" ry="11" fill={profile.secondary} opacity="0.9" />
-    <ellipse cx="30" cy="45" rx="9" ry="12" fill={profile.cream} opacity="0.96" />
-    <path d="M27 25 L30 28 L33 25" fill={profile.detail} stroke={outline} strokeWidth="1.8" strokeLinejoin="round" />
-    <RoomNpcEyes blink={blink} outline={outline} leftX={25} rightX={35} y={20} size={2.1} />
-    <path d="M26 30 Q30 33 34 30" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
-    <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
-    <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <g transform={`rotate(${-motion.earDeg * 0.7} 22 12)`}>
+      <path d="M17 15 L23 9 L26 18 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    </g>
+    <g transform={`rotate(${motion.earDeg * 0.7} 38 12)`}>
+      <path d="M43 15 L37 9 L34 18 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    </g>
+    <g transform={`translate(-${motion.wingLift * 0.35} ${motion.wingLift}) rotate(${-5 - motion.earDeg * 0.2} 20 43)`}>
+      <ellipse cx="20" cy="43" rx="5.5" ry="11" fill={profile.secondary} opacity="0.9" />
+    </g>
+    <g transform={`translate(${motion.wingLift * 0.35} ${motion.wingLift}) rotate(${5 + motion.earDeg * 0.2} 40 43)`}>
+      <ellipse cx="40" cy="43" rx="5.5" ry="11" fill={profile.secondary} opacity="0.9" />
+    </g>
+    <g transform={getNpcBodyTransform(motion)}>
+      <circle cx="30" cy="21" r="12.5" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+      <path d="M17 35 Q30 28 43 35 L46 58 Q30 68 14 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+      <ellipse cx="30" cy="45" rx="9" ry="12" fill={profile.cream} opacity="0.96" />
+      <path d="M27 25 L30 28 L33 25" fill={profile.detail} stroke={outline} strokeWidth="1.8" strokeLinejoin="round" />
+      <RoomNpcEyes blink={blink} outline={outline} leftX={25} rightX={35} y={20} size={2.1} />
+      <path d="M26 30 Q30 33 34 30" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+      <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+      <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    </g>
   </>
 );
 
-const renderCatFoxNpc = ({ profile, outline, blink, fox = false }) => (
+const renderCatFoxNpc = ({ profile, outline, blink, motion, fox = false }) => (
   <>
-    <path d={fox ? 'M44 39 Q56 37 54 55 Q48 65 36 60 Q44 53 42 45 Z' : 'M44 41 Q55 40 54 53 Q50 63 40 60 Q45 52 44 45 Z'} fill={profile.secondary} stroke={outline} strokeWidth="2.4" />
-    <path d="M18 16 L24 7 L27 19 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
-    <path d="M42 16 L36 7 L33 19 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
-    <circle cx="30" cy="21" r="11.8" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
-    <path d="M18 36 Q30 29 42 36 L45 58 Q30 67 15 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
-    <ellipse cx="30" cy="46" rx="8.5" ry="11" fill={profile.cream} />
-    <ellipse cx="30" cy="27" rx="7.2" ry="5.4" fill={profile.cream} />
-    <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={21} size={1.9} />
-    <path d="M27 28 Q30 30 33 28" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
-    <path d="M24 26 L20 24" stroke={outline} strokeWidth="1.4" strokeLinecap="round" />
-    <path d="M36 26 L40 24" stroke={outline} strokeWidth="1.4" strokeLinecap="round" />
-    <rect x="23" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
-    <rect x="32" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <g transform={`rotate(${motion.tailDeg} 42 47)`}>
+      <path d={fox ? 'M44 39 Q56 37 54 55 Q48 65 36 60 Q44 53 42 45 Z' : 'M44 41 Q55 40 54 53 Q50 63 40 60 Q45 52 44 45 Z'} fill={profile.secondary} stroke={outline} strokeWidth="2.4" />
+    </g>
+    <g transform={`rotate(${-motion.earDeg} 23 13)`}>
+      <path d="M18 16 L24 7 L27 19 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    </g>
+    <g transform={`rotate(${motion.earDeg} 37 13)`}>
+      <path d="M42 16 L36 7 L33 19 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    </g>
+    <g transform={getNpcBodyTransform(motion)}>
+      <circle cx="30" cy="21" r="11.8" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+      <path d="M18 36 Q30 29 42 36 L45 58 Q30 67 15 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+      <ellipse cx="30" cy="46" rx="8.5" ry="11" fill={profile.cream} />
+      <ellipse cx="30" cy="27" rx="7.2" ry="5.4" fill={profile.cream} />
+      <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={21} size={1.9} />
+      <path d="M27 28 Q30 30 33 28" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+      <path d="M24 26 L20 24" stroke={outline} strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M36 26 L40 24" stroke={outline} strokeWidth="1.4" strokeLinecap="round" />
+      <rect x="23" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+      <rect x="32" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    </g>
   </>
 );
 
-const renderLizardNpc = ({ profile, outline, blink }) => (
+const renderLizardNpc = ({ profile, outline, blink, motion }) => (
   <>
-    <path d="M44 42 Q57 42 55 57 Q46 61 38 56 Q45 50 44 42 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
-    <path d="M19 12 L24 6 L27 16 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
-    <path d="M26 10 L30 3 L34 10 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
-    <path d="M33 12 L36 6 L41 12 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
-    <ellipse cx="30" cy="20" rx="13" ry="10.5" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
-    <ellipse cx="30" cy="43" rx="16" ry="11.5" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
-    <ellipse cx="30" cy="44" rx="8.5" ry="9" fill={profile.cream} opacity="0.92" />
-    <ellipse cx="19" cy="43" rx="4.5" ry="8.5" fill={profile.secondary} />
-    <ellipse cx="41" cy="43" rx="4.5" ry="8.5" fill={profile.secondary} />
-    <RoomNpcEyes blink={blink} outline={outline} leftX={25} rightX={35} y={19} size={1.7} />
-    <path d="M26 25 Q30 29 34 25" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
-    <rect x="22" y="54" width="5" height="11" rx="2.5" fill={profile.secondary} />
-    <rect x="33" y="54" width="5" height="11" rx="2.5" fill={profile.secondary} />
+    <g transform={`rotate(${motion.tailDeg} 42 44)`}>
+      <path d="M44 42 Q57 42 55 57 Q46 61 38 56 Q45 50 44 42 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    </g>
+    <g transform={`rotate(${motion.crestDeg} 30 10)`}>
+      <path d="M19 12 L24 6 L27 16 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+      <path d="M26 10 L30 3 L34 10 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+      <path d="M33 12 L36 6 L41 12 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+    </g>
+    <g transform={getNpcBodyTransform(motion)}>
+      <ellipse cx="30" cy="20" rx="13" ry="10.5" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
+      <ellipse cx="30" cy="43" rx="16" ry="11.5" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
+      <ellipse cx="30" cy="44" rx="8.5" ry="9" fill={profile.cream} opacity="0.92" />
+      <ellipse cx="19" cy="43" rx="4.5" ry="8.5" fill={profile.secondary} />
+      <ellipse cx="41" cy="43" rx="4.5" ry="8.5" fill={profile.secondary} />
+      <RoomNpcEyes blink={blink} outline={outline} leftX={25} rightX={35} y={19} size={1.7} />
+      <path d="M26 25 Q30 29 34 25" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+      <rect x="22" y="54" width="5" height="11" rx="2.5" fill={profile.secondary} />
+      <rect x="33" y="54" width="5" height="11" rx="2.5" fill={profile.secondary} />
+    </g>
   </>
 );
 
-const renderLionNpc = ({ profile, outline, blink }) => (
+const renderLionNpc = ({ profile, outline, blink, motion }) => (
   <>
-    <path d="M44 42 Q55 42 54 56 Q49 62 40 59 Q45 52 44 46 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
-    <circle cx="30" cy="20" r="14.5" fill={profile.secondary} stroke={outline} strokeWidth="2.4" />
-    <circle cx="30" cy="20" r="9.6" fill={profile.primary} stroke={outline} strokeWidth="2.2" />
-    <path d="M17 36 Q30 29 43 36 L45 58 Q30 68 15 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
-    <ellipse cx="30" cy="46" rx="8.5" ry="10.5" fill={profile.cream} />
-    <circle cx="22" cy="12" r="3.8" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
-    <circle cx="38" cy="12" r="3.8" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
-    <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={20} size={1.9} />
-    <path d="M27 27 Q30 30 33 27" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
-    <rect x="23" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
-    <rect x="32" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <g transform={`rotate(${motion.tailDeg} 42 47)`}>
+      <path d="M44 42 Q55 42 54 56 Q49 62 40 59 Q45 52 44 46 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    </g>
+    <g transform={`translate(30 20) scale(${1 + motion.bodyScaleY * 0.02} ${1 - motion.bodyScaleX * 0.01}) translate(-30 -20)`}>
+      <circle cx="30" cy="20" r="14.5" fill={profile.secondary} stroke={outline} strokeWidth="2.4" />
+    </g>
+    <g transform={getNpcBodyTransform(motion)}>
+      <circle cx="30" cy="20" r="9.6" fill={profile.primary} stroke={outline} strokeWidth="2.2" />
+      <path d="M17 36 Q30 29 43 36 L45 58 Q30 68 15 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+      <ellipse cx="30" cy="46" rx="8.5" ry="10.5" fill={profile.cream} />
+      <circle cx="22" cy="12" r="3.8" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
+      <circle cx="38" cy="12" r="3.8" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
+      <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={20} size={1.9} />
+      <path d="M27 27 Q30 30 33 27" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+      <rect x="23" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+      <rect x="32" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    </g>
   </>
 );
 
-const renderLambNpc = ({ profile, outline, blink }) => (
+const renderLambNpc = ({ profile, outline, blink, motion }) => (
   <>
     {[20, 30, 40].map((cx) => (
       <circle key={`head-puff-${cx}`} cx={cx} cy="17" r="7.4" fill={profile.primary} stroke={outline} strokeWidth="1.8" />
     ))}
-    <ellipse cx="19" cy="20" rx="3.2" ry="7" fill={profile.secondary} stroke={outline} strokeWidth="1.6" />
-    <ellipse cx="41" cy="20" rx="3.2" ry="7" fill={profile.secondary} stroke={outline} strokeWidth="1.6" />
-    <ellipse cx="30" cy="22" rx="9" ry="8" fill={profile.cream} stroke={outline} strokeWidth="2" />
-    {[18, 26, 34, 42].map((cx) => (
-      <circle key={`body-puff-${cx}`} cx={cx} cy="45" r="8.5" fill={profile.primary} stroke={outline} strokeWidth="1.8" />
-    ))}
-    <ellipse cx="30" cy="46" rx="11" ry="10" fill={profile.cream} opacity="0.96" />
-    <RoomNpcEyes blink={blink} outline={outline} leftX={26} rightX={34} y={21} size={1.6} />
-    <path d="M27 27 Q30 29 33 27" fill="none" stroke={outline} strokeWidth="1.8" strokeLinecap="round" />
-    <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
-    <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <g transform={`rotate(${-motion.earDeg} 19 20)`}>
+      <ellipse cx="19" cy="20" rx="3.2" ry="7" fill={profile.secondary} stroke={outline} strokeWidth="1.6" />
+    </g>
+    <g transform={`rotate(${motion.earDeg} 41 20)`}>
+      <ellipse cx="41" cy="20" rx="3.2" ry="7" fill={profile.secondary} stroke={outline} strokeWidth="1.6" />
+    </g>
+    <g transform={getNpcBodyTransform(motion)}>
+      <ellipse cx="30" cy="22" rx="9" ry="8" fill={profile.cream} stroke={outline} strokeWidth="2" />
+      {[18, 26, 34, 42].map((cx) => (
+        <circle key={`body-puff-${cx}`} cx={cx} cy="45" r="8.5" fill={profile.primary} stroke={outline} strokeWidth="1.8" />
+      ))}
+      <ellipse cx="30" cy="46" rx="11" ry="10" fill={profile.cream} opacity="0.96" />
+      <RoomNpcEyes blink={blink} outline={outline} leftX={26} rightX={34} y={21} size={1.6} />
+      <path d="M27 27 Q30 29 33 27" fill="none" stroke={outline} strokeWidth="1.8" strokeLinecap="round" />
+      <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+      <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    </g>
   </>
 );
 
-const renderBirdNpc = ({ profile, outline, blink }) => (
+const renderBirdNpc = ({ profile, outline, blink, motion }) => (
   <>
-    <path d="M18 15 L24 8 L27 18 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
-    <path d="M42 15 L36 8 L33 18 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
-    <path d="M44 40 Q56 39 54 54 Q47 64 36 60 Q44 53 43 46 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
-    <circle cx="30" cy="20" r="11.6" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
-    <path d="M17 36 Q30 28 43 36 L46 58 Q30 68 14 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
-    <path d="M18 41 Q24 34 27 52" fill={profile.secondary} opacity="0.9" />
-    <path d="M42 41 Q36 34 33 52" fill={profile.secondary} opacity="0.9" />
-    <ellipse cx="30" cy="45" rx="8.5" ry="11.2" fill={profile.cream} opacity="0.96" />
-    <path d="M27 25 L30 28 L33 25" fill={profile.detail} stroke={outline} strokeWidth="1.6" strokeLinejoin="round" />
-    <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={20} size={1.9} />
-    <path d="M26 30 Q30 33 34 30" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
-    <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
-    <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    <g transform={`rotate(${-motion.crestDeg * 0.5} 22 12)`}>
+      <path d="M18 15 L24 8 L27 18 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+    </g>
+    <g transform={`rotate(${motion.crestDeg * 0.5} 38 12)`}>
+      <path d="M42 15 L36 8 L33 18 Z" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+    </g>
+    <g transform={`rotate(${motion.tailDeg} 42 46)`}>
+      <path d="M44 40 Q56 39 54 54 Q47 64 36 60 Q44 53 43 46 Z" fill={profile.secondary} stroke={outline} strokeWidth="2.2" />
+    </g>
+    <g transform={`translate(-${motion.wingLift * 0.42} ${motion.wingLift}) rotate(${-7} 22 42)`}>
+      <path d="M18 41 Q24 34 27 52" fill={profile.secondary} opacity="0.9" />
+    </g>
+    <g transform={`translate(${motion.wingLift * 0.42} ${motion.wingLift}) rotate(${7} 38 42)`}>
+      <path d="M42 41 Q36 34 33 52" fill={profile.secondary} opacity="0.9" />
+    </g>
+    <g transform={getNpcBodyTransform(motion)}>
+      <circle cx="30" cy="20" r="11.6" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
+      <path d="M17 36 Q30 28 43 36 L46 58 Q30 68 14 58 Z" fill={profile.primary} stroke={outline} strokeWidth="2.8" />
+      <ellipse cx="30" cy="45" rx="8.5" ry="11.2" fill={profile.cream} opacity="0.96" />
+      <path d="M27 25 L30 28 L33 25" fill={profile.detail} stroke={outline} strokeWidth="1.6" strokeLinejoin="round" />
+      <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={20} size={1.9} />
+      <path d="M26 30 Q30 33 34 30" fill="none" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+      <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+      <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+    </g>
   </>
 );
 
-const renderRobotNpc = ({ profile, outline, blink }) => (
+const renderRobotNpc = ({ profile, outline, blink, motion }) => (
   <>
-    <path d="M30 4 L30 10" stroke={outline} strokeWidth="2.4" strokeLinecap="round" />
-    <circle cx="30" cy="4" r="2.8" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
-    <rect x="18" y="12" width="24" height="18" rx="8" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
-    <rect x="19" y="34" width="22" height="24" rx="10" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
-    <rect x="23" y="39" width="14" height="8" rx="4" fill={profile.cream} opacity="0.9" />
-    <circle cx="16" cy="41" r="4" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
-    <circle cx="44" cy="41" r="4" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
-    <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
-    <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
-    <path d="M22 30 L18 35" stroke={outline} strokeWidth="2" strokeLinecap="round" />
-    <path d="M38 30 L42 35" stroke={outline} strokeWidth="2" strokeLinecap="round" />
-    <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={21} size={1.7} />
-    <path d="M27 26 Q30 28 33 26" fill="none" stroke={outline} strokeWidth="1.8" strokeLinecap="round" />
+    <g transform={`rotate(${motion.antennaDeg} 30 10)`}>
+      <path d="M30 4 L30 10" stroke={outline} strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="30" cy="4" r="2.8" fill={profile.detail} stroke={outline} strokeWidth="1.8" />
+    </g>
+    <g transform={`translate(0 ${motion.robotArmY})`}>
+      <circle cx="16" cy="41" r="4" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
+      <circle cx="44" cy="41" r="4" fill={profile.secondary} stroke={outline} strokeWidth="1.8" />
+      <path d="M22 30 L18 35" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+      <path d="M38 30 L42 35" stroke={outline} strokeWidth="2" strokeLinecap="round" />
+    </g>
+    <g transform={getNpcBodyTransform(motion)}>
+      <rect x="18" y="12" width="24" height="18" rx="8" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
+      <rect x="19" y="34" width="22" height="24" rx="10" fill={profile.primary} stroke={outline} strokeWidth="2.6" />
+      <rect x="23" y="39" width="14" height="8" rx="4" fill={profile.cream} opacity="0.9" />
+      <rect x="22" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+      <rect x="33" y="58" width="5" height="9" rx="2.5" fill={profile.secondary} />
+      <RoomNpcEyes blink={blink} outline={outline} leftX={25.5} rightX={34.5} y={21} size={1.7} />
+      <path d="M27 26 Q30 28 33 26" fill="none" stroke={outline} strokeWidth="1.8" strokeLinecap="round" />
+    </g>
   </>
 );
 
@@ -1626,28 +2266,29 @@ const RoomNpcArt = ({ actor, timeMs, roomTheme }) => {
   const blink = Math.sin(timeMs / 420 + actor.phase) > 0.94;
   const profile = getRoomNpcArtProfile(roomTheme?.id, actor.id);
   const outline = actor.accentColor;
+  const motion = getRoomNpcMotionPose(profile, actor, timeMs);
 
   const renderNpcFigure = () => {
     switch (profile.species) {
       case 'owl':
-        return renderOwlNpc({ profile, outline, blink });
+        return renderOwlNpc({ profile, outline, blink, motion });
       case 'cat':
-        return renderCatFoxNpc({ profile, outline, blink });
+        return renderCatFoxNpc({ profile, outline, blink, motion });
       case 'lizard':
-        return renderLizardNpc({ profile, outline, blink });
+        return renderLizardNpc({ profile, outline, blink, motion });
       case 'lion':
-        return renderLionNpc({ profile, outline, blink });
+        return renderLionNpc({ profile, outline, blink, motion });
       case 'lamb':
-        return renderLambNpc({ profile, outline, blink });
+        return renderLambNpc({ profile, outline, blink, motion });
       case 'fox':
-        return renderCatFoxNpc({ profile, outline, blink, fox: true });
+        return renderCatFoxNpc({ profile, outline, blink, motion, fox: true });
       case 'bird':
-        return renderBirdNpc({ profile, outline, blink });
+        return renderBirdNpc({ profile, outline, blink, motion });
       case 'robot':
-        return renderRobotNpc({ profile, outline, blink });
+        return renderRobotNpc({ profile, outline, blink, motion });
       case 'frog':
       default:
-        return renderFrogNpc({ profile, outline, blink });
+        return renderFrogNpc({ profile, outline, blink, motion });
     }
   };
 
@@ -1684,7 +2325,7 @@ const RoomNpcArt = ({ actor, timeMs, roomTheme }) => {
         }}
       >
         {renderNpcFigure()}
-        <RoomNpcAccessory accessory={profile.accessory} detail={profile.detail} outline={outline} />
+        <RoomNpcAccessory accessory={profile.accessory} detail={profile.detail} outline={outline} motion={motion} />
         <path d="M18 30 Q30 25 42 30" fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="3" strokeLinecap="round" />
         <circle cx="45" cy="24" r="4" fill={actor.glowColor} opacity="0.86" />
       </svg>
@@ -3154,6 +3795,11 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                             }}
                           />
                         )}
+                        <RoomFurnitureReactionLayer
+                          item={item}
+                          reaction={itemReaction}
+                          timeMs={roomRuntime.timeMs}
+                        />
                         <FurnitureArt item={item} />
                       </button>
                     );
@@ -3360,7 +4006,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
               </div>
               <div style={{ fontSize: 15, lineHeight: 1.34 }}>
                 {roomReactionState.activeReaction
-                  ? `${roomReactionState.activeReaction.itemName} answers with ${roomReactionState.activeReaction.reactionLabel}.`
+                  ? `${roomReactionState.activeReaction.itemName} answers with ${roomReactionState.activeReaction.beatLabel || roomReactionState.activeReaction.reactionLabel}.`
                   : roomItems.length === 0
                     ? 'Add a room piece near the cast to wake the room.'
                     : 'Move a room piece near the cast to wake the room.'}

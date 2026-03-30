@@ -505,6 +505,8 @@ const App = () => {
               width: item.width,
               height: item.height,
               reaction: reactiveFurnitureById.get(item.id)?.reaction || null,
+              reactionBeat: reactiveFurnitureById.get(item.id)?.beat || null,
+              reactionBeatLabel: reactiveFurnitureById.get(item.id)?.beatLabel || null,
               reactingTo: reactiveFurnitureById.get(item.id)?.speaker || null,
             })),
             player: roomRuntime?.player || null,
