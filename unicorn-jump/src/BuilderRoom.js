@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   BUILDER_ROOM_GRID_SIZE,
-  getFurnitureCatalogForTheme,
+  getFurnitureCatalogForRoom,
   snapRoomPosition,
 } from './builderState';
 
@@ -100,23 +100,15 @@ const isPointerInsideBounds = (element, clientX, clientY) => {
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
-const getRoomPanelWidth = (layoutMode) => {
-  const gutter = layoutMode.compact ? 12 : 18;
-  return Math.max(320, Math.min(layoutMode.viewportWidth - gutter, 1760));
-};
-
 const getRoomStageScale = (roomWidth, roomHeight, layoutMode) => {
-  const panelWidth = getRoomPanelWidth(layoutMode);
-  const horizontalPadding = layoutMode.compact ? 28 : 56;
-  const sideColumnWidth = layoutMode.stacked ? 0 : 272;
-  const sideColumnGap = layoutMode.stacked ? 0 : 18;
-  const roomColumnWidth = panelWidth - horizontalPadding - sideColumnWidth - sideColumnGap;
-  const heightBudget = layoutMode.viewportHeight - (layoutMode.compact ? 360 : 250);
-  const widthScale = roomColumnWidth / roomWidth;
+  const horizontalPadding = layoutMode.compact ? 20 : 30;
+  const widthBudget = layoutMode.viewportWidth - horizontalPadding * 2;
+  const heightBudget = layoutMode.viewportHeight - (layoutMode.compact ? 250 : 220);
+  const widthScale = widthBudget / roomWidth;
   const heightScale = heightBudget / roomHeight;
-  const maxScale = layoutMode.compact ? 1.2 : layoutMode.stacked ? 1.52 : 2.08;
+  const maxScale = layoutMode.compact ? 1.58 : layoutMode.stacked ? 2.02 : 2.36;
 
-  return clamp(Math.min(widthScale, heightScale, maxScale), 0.56, maxScale);
+  return clamp(Math.min(widthScale, heightScale, maxScale), 0.9, maxScale);
 };
 
 const ROOM_UNICORN_ASSET = `${process.env.PUBLIC_URL}/assets/images/character/unicorn_little.svg`;
@@ -137,11 +129,15 @@ const ROOM_ITEM_REACTION_TYPES = {
   torch: 'flare',
   plate: 'twinkle',
   recliner: 'settle',
+  cushion: 'settle',
   stool: 'bounce',
   gem: 'sparkle',
   screen: 'flutter',
   planter: 'sway',
+  vase: 'sway',
+  fountain: 'glow',
   table: 'hum',
+  shelf: 'hum',
   bench: 'bounce',
   chest: 'hum',
 };
@@ -153,15 +149,78 @@ const getRoomWalkBounds = (roomWidth, roomHeight, actorWidth, actorHeight) => ({
   yMax: Math.max(Math.round(roomHeight * 0.58), roomHeight - actorHeight - 18),
 });
 
-const createRoomNpcBlueprints = (theme) => [
+const hashSeed = (value = '') =>
+  String(value).split('').reduce((seed, char) => ((seed * 33) ^ char.charCodeAt(0)) >>> 0, 5381);
+
+const rotateList = (items, offset) => {
+  if (!Array.isArray(items) || items.length <= 1) {
+    return items || [];
+  }
+
+  const safeOffset = ((offset % items.length) + items.length) % items.length;
+  return [...items.slice(safeOffset), ...items.slice(0, safeOffset)];
+};
+
+const ROOM_THEME_CAST_VARIANTS = {
+  default: {
+    minCount: 3,
+    maxCount: 4,
+    extraNames: ['Lantern Keeper', 'Little Singer', 'Garden Scout'],
+  },
+  'korean-garden': {
+    minCount: 4,
+    maxCount: 5,
+    extraNames: ['Lantern Keeper', 'Pond Scout', 'Bamboo Singer'],
+  },
+  'bavarian-castle': {
+    minCount: 3,
+    maxCount: 5,
+    extraNames: ['Banner Herald', 'Turret Scout', 'Cloud Page'],
+  },
+  'spanish-palace': {
+    minCount: 4,
+    maxCount: 5,
+    extraNames: ['Tile Dancer', 'Courtyard Host', 'Fountain Cousin'],
+  },
+  'mesoamerican-pyramid': {
+    minCount: 3,
+    maxCount: 5,
+    extraNames: ['Sun Keeper', 'Glyph Runner', 'Temple Cousin'],
+  },
+  'grecoroman-circus': {
+    minCount: 4,
+    maxCount: 5,
+    extraNames: ['Ribbon Herald', 'Garden Laureate', 'Arena Twin'],
+  },
+  'scandinavian-longhouse': {
+    minCount: 3,
+    maxCount: 5,
+    extraNames: ['Hearth Cousin', 'Snow Scout', 'Beam Keeper'],
+  },
+  'japanese-fortress': {
+    minCount: 4,
+    maxCount: 5,
+    extraNames: ['Lantern Fox', 'Bridge Cousin', 'Blossom Watcher'],
+  },
+  'babylonian-hanging-gardens': {
+    minCount: 4,
+    maxCount: 5,
+    extraNames: ['Vine Singer', 'Pool Keeper', 'Terrace Cousin'],
+  },
+  'future-sky-dome': {
+    minCount: 3,
+    maxCount: 5,
+    extraNames: ['Orbit Bot', 'Nova Twin', 'Halo Scout'],
+  },
+};
+
+const ROOM_CAST_SLOTS = [
   {
     id: 'npc-guide',
     name: 'Guide',
-    bodyColor: theme?.accent || '#f4b457',
-    accentColor: theme?.frame || '#34435a',
-    glowColor: 'rgba(255,255,255,0.18)',
-    anchor: 0.28,
-    range: 0.16,
+    scriptKey: 'guide',
+    anchor: 0.14,
+    range: 0.08,
     lane: 0.16,
     phase: 0.15,
     periodMs: 3600,
@@ -169,16 +228,82 @@ const createRoomNpcBlueprints = (theme) => [
   {
     id: 'npc-friend',
     name: 'Room Friend',
-    bodyColor: theme?.wallBottom || '#d2dccf',
-    accentColor: theme?.accent || '#85f1ff',
-    glowColor: 'rgba(255,255,255,0.12)',
-    anchor: 0.72,
-    range: 0.14,
-    lane: 0.02,
+    scriptKey: 'friend',
+    anchor: 0.38,
+    range: 0.08,
+    lane: 0.08,
     phase: 1.25,
     periodMs: 4200,
   },
+  {
+    id: 'npc-friend-2',
+    name: 'Room Cousin',
+    scriptKey: 'friend',
+    anchor: 0.58,
+    range: 0.07,
+    lane: 0.13,
+    phase: 2.1,
+    periodMs: 3900,
+  },
+  {
+    id: 'npc-friend-3',
+    name: 'Room Scout',
+    scriptKey: 'friend',
+    anchor: 0.76,
+    range: 0.06,
+    lane: 0.03,
+    phase: 2.9,
+    periodMs: 4500,
+  },
+  {
+    id: 'npc-friend-4',
+    name: 'Room Singer',
+    scriptKey: 'friend',
+    anchor: 0.9,
+    range: 0.05,
+    lane: 0.2,
+    phase: 3.65,
+    periodMs: 4100,
+  },
 ];
+
+const createRoomNpcBlueprints = (theme, roomSeed = 'room') => {
+  const castVariant = ROOM_THEME_CAST_VARIANTS[theme?.id] || ROOM_THEME_CAST_VARIANTS.default;
+  const countSpan = Math.max(1, castVariant.maxCount - castVariant.minCount + 1);
+  const targetCount = Math.min(
+    ROOM_CAST_SLOTS.length,
+    castVariant.minCount + (hashSeed(`${theme?.id || 'room'}:${roomSeed}:count`) % countSpan)
+  );
+  const rotatedExtraNames = rotateList(
+    castVariant.extraNames,
+    hashSeed(`${theme?.id || 'room'}:${roomSeed}:names`) % Math.max(1, castVariant.extraNames.length)
+  );
+  const rotatedExtraSlots = rotateList(
+    ROOM_CAST_SLOTS.slice(2),
+    hashSeed(`${theme?.id || 'room'}:${roomSeed}:slots`) % Math.max(1, ROOM_CAST_SLOTS.length - 2)
+  );
+  const selectedSlots = [ROOM_CAST_SLOTS[0], ROOM_CAST_SLOTS[1], ...rotatedExtraSlots].slice(0, targetCount);
+
+  return selectedSlots.map((slot, index) => {
+    const extraName = index >= 2 ? rotatedExtraNames[index - 2] || slot.name : slot.name;
+    const accentBlend = index % 2 === 0 ? theme?.accent || '#f4b457' : theme?.frame || '#34435a';
+    const bodyColor = index === 0
+      ? theme?.accent || '#f4b457'
+      : index % 2 === 0
+        ? theme?.wallBottom || '#d2dccf'
+        : theme?.wallTop || '#ecf0e8';
+
+    return {
+      ...slot,
+      name: extraName,
+      bodyColor,
+      accentColor: accentBlend,
+      glowColor: index % 2 === 0 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.12)',
+      phase: slot.phase + index * 0.42,
+      variantIndex: index,
+    };
+  });
+};
 
 const createInitialRoomRuntime = (roomWidth, roomHeight) => {
   const walkBounds = getRoomWalkBounds(
@@ -254,7 +379,7 @@ const advanceRoomRuntime = (runtime, ms, roomWidth, roomHeight) => ({
   player: advanceRoomPlayer(runtime.player, ms, roomWidth, roomHeight),
 });
 
-const getNpcActors = (roomTheme, roomWidth, roomHeight, timeMs) => {
+const getNpcActors = (roomTheme, roomWidth, roomHeight, timeMs, roomSeed) => {
   const walkBounds = getRoomWalkBounds(
     roomWidth,
     roomHeight,
@@ -264,7 +389,7 @@ const getNpcActors = (roomTheme, roomWidth, roomHeight, timeMs) => {
   const spanX = Math.max(1, walkBounds.xMax - walkBounds.xMin);
   const spanY = Math.max(1, walkBounds.yMax - walkBounds.yMin);
 
-  return createRoomNpcBlueprints(roomTheme).map((npc) => {
+  return createRoomNpcBlueprints(roomTheme, roomSeed).map((npc) => {
     const angle = (timeMs / npc.periodMs) * Math.PI * 2 + npc.phase;
     const x = clamp(
       walkBounds.xMin + spanX * npc.anchor + Math.sin(angle) * spanX * npc.range,
@@ -467,11 +592,15 @@ const ROOM_ITEM_DEFAULT_BEATS = {
   table: { beat: 'table-hum', label: 'table hum' },
   plate: { beat: 'fruit-orbit', label: 'fruit twinkle' },
   recliner: { beat: 'seat-sigh', label: 'cushion sigh' },
+  cushion: { beat: 'seat-sigh', label: 'cushion puff' },
   stool: { beat: 'stool-hop', label: 'stool hop' },
   bench: { beat: 'bench-thrum', label: 'bench thrum' },
   chest: { beat: 'lock-glint', label: 'lock glint' },
   planter: { beat: 'vine-song', label: 'vine song' },
+  vase: { beat: 'vine-song', label: 'vase sway' },
+  fountain: { beat: 'tea-steam', label: 'water shimmer' },
   gem: { beat: 'gem-spark', label: 'gem spark' },
+  shelf: { beat: 'table-hum', label: 'shelf glint' },
 };
 
 const getRoomItemReactionBeat = (item) =>
@@ -489,16 +618,16 @@ const getCycleItem = (items, timeMs, periodMs, phase = 0) => {
   return items[index] ?? items[0] ?? null;
 };
 
-const buildRoomSocialState = (runtime, roomTheme, roomWidth, roomHeight) => {
+const buildRoomSocialState = (runtime, roomTheme, roomWidth, roomHeight, roomSeed) => {
   const player = runtime.player || null;
-  const npcs = getNpcActors(roomTheme, roomWidth, roomHeight, runtime.timeMs);
+  const npcs = getNpcActors(roomTheme, roomWidth, roomHeight, runtime.timeMs, roomSeed);
   const script = getRoomSocialScript(roomTheme?.id);
   const playerIsMoving = player
     ? Math.abs(player.targetX - player.x) > 1 || Math.abs(player.targetY - player.y) > 1
     : false;
 
   const socialNpcs = npcs.map((npc, index) => {
-    const actorScript = npc.id === 'npc-guide' ? script.guide : script.friend;
+    const actorScript = script[npc.scriptKey] || script.friend || script.guide;
     const nearPlayer = getActorDistance(npc, player) < ROOM_SOCIAL_NEAR_DISTANCE;
     const speechWindow = ((runtime.timeMs + index * 1100) % 6200) < 2550;
     const speechText = nearPlayer
@@ -506,8 +635,8 @@ const buildRoomSocialState = (runtime, roomTheme, roomWidth, roomHeight) => {
       : speechWindow
         ? getCycleItem(actorScript.idle, runtime.timeMs, 2200, index * 0.4)
         : null;
-    const emote = nearPlayer ? (npc.id === 'npc-guide' ? 'hi' : 'yay') : speechWindow ? '...' : null;
-    const mood = nearPlayer ? 'welcoming' : speechWindow ? 'chatty' : 'wandering';
+    const emote = nearPlayer ? (npc.scriptKey === 'guide' ? 'hi' : 'yay') : speechWindow ? '...' : null;
+    const mood = nearPlayer ? 'welcoming' : speechWindow ? 'chatty' : index % 2 === 0 ? 'wandering' : 'dreamy';
 
     return {
       ...npc,
@@ -681,7 +810,7 @@ const buildRoomRuntimeSnapshot = (socialState, roomReactionState, roomTheme) => 
       }
     : null,
   npcs: socialState.npcs.map((npc) => {
-    const artProfile = getRoomNpcArtProfile(roomTheme?.id, npc.id);
+    const artProfile = getRoomNpcArtProfile(roomTheme?.id, npc);
 
     return {
       id: npc.id,
@@ -1837,15 +1966,94 @@ const ROOM_NPC_ART_PROFILES = {
   },
 };
 
-const getRoomNpcArtProfile = (roomThemeId, actorId) => {
+const ROOM_THEME_EXTRA_ACCESSORIES = {
+  default: ['leaf', 'flower', 'badge'],
+  'korean-garden': ['lantern', 'leaf', 'flower', 'ribbon'],
+  'bavarian-castle': ['badge', 'bow', 'lantern', 'bell'],
+  'spanish-palace': ['flower', 'fan', 'ribbon', 'bell'],
+  'mesoamerican-pyramid': ['sun', 'feather', 'flower', 'badge'],
+  'grecoroman-circus': ['laurel', 'ribbon', 'fan', 'flower'],
+  'scandinavian-longhouse': ['scarf', 'bell', 'leaf', 'badge'],
+  'japanese-fortress': ['ribbon', 'blossom', 'fan', 'lantern'],
+  'babylonian-hanging-gardens': ['vine', 'flower', 'leaf', 'sun'],
+  'future-sky-dome': ['visor', 'halo', 'badge', 'halo'],
+};
+
+const hexToRgb = (hex) => {
+  const normalized = String(hex || '').replace('#', '');
+  const full = normalized.length === 3
+    ? normalized.split('').map((char) => `${char}${char}`).join('')
+    : normalized;
+
+  if (full.length !== 6) {
+    return { r: 255, g: 255, b: 255 };
+  }
+
+  return {
+    r: parseInt(full.slice(0, 2), 16),
+    g: parseInt(full.slice(2, 4), 16),
+    b: parseInt(full.slice(4, 6), 16),
+  };
+};
+
+const rgbToHex = ({ r, g, b }) =>
+  `#${[r, g, b]
+    .map((value) => Math.round(clamp(value, 0, 255)).toString(16).padStart(2, '0'))
+    .join('')}`;
+
+const blendHexColors = (left, right, mix = 0.5) => {
+  const leftRgb = hexToRgb(left);
+  const rightRgb = hexToRgb(right);
+  const weight = clamp(mix, 0, 1);
+
+  return rgbToHex({
+    r: leftRgb.r + (rightRgb.r - leftRgb.r) * weight,
+    g: leftRgb.g + (rightRgb.g - leftRgb.g) * weight,
+    b: leftRgb.b + (rightRgb.b - leftRgb.b) * weight,
+  });
+};
+
+const getRoomNpcArtProfile = (roomThemeId, actor) => {
   const themeProfiles = ROOM_NPC_ART_PROFILES[roomThemeId] || ROOM_NPC_ART_PROFILES.default;
-  return actorId === 'npc-guide' ? themeProfiles.guide : themeProfiles.friend;
+  const actorId = actor?.id || 'npc-friend';
+
+  if (actorId === 'npc-guide') {
+    return themeProfiles.guide;
+  }
+
+  if (actorId === 'npc-friend') {
+    return themeProfiles.friend;
+  }
+
+  const variantIndex = Math.max(0, actor?.variantIndex ?? 2);
+  const baseProfile = variantIndex % 2 === 0 ? themeProfiles.guide : themeProfiles.friend;
+  const accentPool =
+    ROOM_THEME_EXTRA_ACCESSORIES[roomThemeId] || ROOM_THEME_EXTRA_ACCESSORIES.default;
+  const accentColor = accentPool[(variantIndex - 2) % accentPool.length] || baseProfile.accessory;
+  const mixStrength = 0.18 + ((variantIndex - 2) % 3) * 0.12;
+
+  return {
+    species: baseProfile.species,
+    primary: blendHexColors(
+      baseProfile.primary,
+      themeProfiles.friend.primary,
+      variantIndex % 2 === 0 ? 0.24 : 0.12
+    ),
+    secondary: blendHexColors(
+      baseProfile.secondary,
+      themeProfiles.guide.secondary,
+      variantIndex % 2 === 0 ? 0.1 : 0.22
+    ),
+    cream: blendHexColors(baseProfile.cream, '#ffffff', 0.18),
+    detail: blendHexColors(themeProfiles.guide.detail, themeProfiles.friend.detail, mixStrength),
+    accessory: accentColor,
+  };
 };
 
 const getRoomNpcMotionPose = (profile, actor, timeMs) => {
   const moodBoost =
     actor.mood === 'chatty' ? 1.18 : actor.nearPlayer ? 1.1 : actor.mood === 'wandering' ? 0.92 : 1;
-  const phase = timeMs / 260 + actor.phase * 4.4 + (actor.id === 'npc-friend' ? 1.2 : 0);
+  const phase = timeMs / 260 + actor.phase * 4.4 + (actor.variantIndex || 0) * 0.6;
   const wave = Math.sin(phase);
   const quick = Math.sin(phase * 1.7);
   const bounce = Math.abs(Math.sin(phase * 1.35));
@@ -2264,7 +2472,7 @@ const renderRobotNpc = ({ profile, outline, blink, motion }) => (
 
 const RoomNpcArt = ({ actor, timeMs, roomTheme }) => {
   const blink = Math.sin(timeMs / 420 + actor.phase) > 0.94;
-  const profile = getRoomNpcArtProfile(roomTheme?.id, actor.id);
+  const profile = getRoomNpcArtProfile(roomTheme?.id, actor);
   const outline = actor.accentColor;
   const motion = getRoomNpcMotionPose(profile, actor, timeMs);
 
@@ -2466,6 +2674,47 @@ const FurnitureArt = ({ item, ghost = false }) => {
     );
   }
 
+  if (item.type === 'cushion') {
+    return (
+      <div style={sharedStyle}>
+        <div
+          style={{
+            position: 'absolute',
+            left: '8%',
+            right: '8%',
+            bottom: '18%',
+            height: '40%',
+            borderRadius: 24,
+            background: `linear-gradient(180deg, #ffffff, ${item.color} 36%, ${item.accent} 100%)`,
+            border: `3px solid ${item.accent}`,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '22%',
+            right: '22%',
+            top: '28%',
+            height: '18%',
+            borderRadius: 999,
+            background: 'rgba(255,255,255,0.54)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '46%',
+            top: '36%',
+            width: '8%',
+            height: '10%',
+            borderRadius: '50%',
+            background: item.accent,
+          }}
+        />
+      </div>
+    );
+  }
+
   if (item.type === 'recliner') {
     return (
       <div style={sharedStyle}>
@@ -2651,6 +2900,102 @@ const FurnitureArt = ({ item, ghost = false }) => {
     );
   }
 
+  if (item.type === 'vase') {
+    return (
+      <div style={sharedStyle}>
+        <div
+          style={{
+            position: 'absolute',
+            left: '30%',
+            right: '30%',
+            top: '8%',
+            height: '18%',
+            borderRadius: 999,
+            background: item.accent,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '18%',
+            right: '18%',
+            top: '18%',
+            height: '52%',
+            borderRadius: '42% 42% 34% 34% / 20% 20% 60% 60%',
+            background: `linear-gradient(180deg, #ffffff, ${item.color} 40%, ${item.accent} 100%)`,
+            border: `3px solid ${item.accent}`,
+          }}
+        />
+        {['24%', '46%', '68%'].map((left, index) => (
+          <div
+            key={`${item.id}-vase-stem-${left}`}
+            style={{
+              position: 'absolute',
+              left,
+              top: `${index === 1 ? 0 : 6}%`,
+              width: '7%',
+              height: '24%',
+              borderRadius: 999,
+              background: index === 1 ? item.accent : item.color,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (item.type === 'fountain') {
+    return (
+      <div style={sharedStyle}>
+        <div
+          style={{
+            position: 'absolute',
+            left: '12%',
+            right: '12%',
+            bottom: '10%',
+            height: '18%',
+            borderRadius: 18,
+            background: item.accent,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '24%',
+            right: '24%',
+            bottom: '22%',
+            height: '18%',
+            borderRadius: 18,
+            background: item.color,
+            border: `3px solid ${item.accent}`,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '42%',
+            top: '16%',
+            width: '16%',
+            height: '36%',
+            borderRadius: 999,
+            background: item.accent,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '32%',
+            right: '32%',
+            top: '10%',
+            height: '22%',
+            borderRadius: '50% 50% 18px 18px',
+            background: `radial-gradient(circle at 50% 40%, #ffffff 0%, ${item.color} 52%, ${item.accent} 100%)`,
+          }}
+        />
+      </div>
+    );
+  }
+
   if (item.type === 'table') {
     return (
       <div style={sharedStyle}>
@@ -2677,6 +3022,53 @@ const FurnitureArt = ({ item, ghost = false }) => {
               height: '34%',
               borderRadius: 999,
               background: item.accent,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (item.type === 'shelf') {
+    return (
+      <div style={sharedStyle}>
+        <div
+          style={{
+            position: 'absolute',
+            left: '10%',
+            right: '10%',
+            top: '10%',
+            height: '68%',
+            borderRadius: 16,
+            background: item.color,
+            border: `3px solid ${item.accent}`,
+          }}
+        />
+        {[22, 44, 66].map((top) => (
+          <div
+            key={`${item.id}-shelf-${top}`}
+            style={{
+              position: 'absolute',
+              left: '14%',
+              right: '14%',
+              top: `${top}%`,
+              height: 6,
+              borderRadius: 999,
+              background: item.accent,
+            }}
+          />
+        ))}
+        {[20, 54].map((left, index) => (
+          <div
+            key={`${item.id}-shelf-item-${left}`}
+            style={{
+              position: 'absolute',
+              left: `${left}%`,
+              top: index === 0 ? '18%' : '48%',
+              width: 12,
+              height: 18,
+              borderRadius: 6,
+              background: index === 0 ? '#ffffff' : item.accent,
             }}
           />
         ))}
@@ -3237,7 +3629,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
   const roomWidth = house?.room?.width ?? BUILDER_ROOM_GRID_SIZE * 10;
   const roomHeight = house?.room?.height ?? BUILDER_ROOM_GRID_SIZE * 7;
   const roomTheme = house?.roomTheme;
-  const trayItems = getFurnitureCatalogForTheme(roomTheme?.id);
+  const trayItems = getFurnitureCatalogForRoom(roomTheme?.id, houseId || roomTheme?.id);
   const roomRef = useRef(null);
   const removeZoneRef = useRef(null);
   const [dragState, setDragState] = useState(null);
@@ -3253,7 +3645,8 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
     roomRuntime,
     roomTheme,
     roomWidth,
-    roomHeight
+    roomHeight,
+    houseId || roomTheme?.id || 'room'
   );
   const roomReactionState = buildRoomReactionState(roomItems, roomSocialState, roomTheme);
   const npcActors = roomSocialState.npcs;
@@ -3312,6 +3705,29 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
       if (visualViewport) {
         visualViewport.removeEventListener('resize', handleResize);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverscroll = document.body.style.overscrollBehavior;
+    const previousHtmlOverscroll = document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+    document.documentElement.style.overscrollBehavior = 'none';
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overscrollBehavior = previousBodyOverscroll;
+      document.documentElement.style.overscrollBehavior = previousHtmlOverscroll;
     };
   }, []);
 
@@ -3549,38 +3965,79 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
       return next;
     });
   };
+  const screenInset = layoutMode.compact ? 10 : 14;
+  const topOverlayInset = layoutMode.compact ? 12 : 18;
+  const stageTopInset = layoutMode.compact ? 96 : 110;
+  const trayDockHeight = layoutMode.compact ? 148 : 138;
+  const stageBottomInset = trayDockHeight + (layoutMode.compact ? 16 : 20);
+  const overlayCardStyle = {
+    background: 'rgba(255,255,255,0.74)',
+    borderRadius: 22,
+    border: '1px solid rgba(255,255,255,0.82)',
+    boxShadow: '0 18px 34px rgba(15, 23, 42, 0.14)',
+    backdropFilter: 'blur(14px)',
+  };
+  const compactLabelStyle = {
+    fontSize: 11,
+    fontWeight: 800,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    opacity: 0.7,
+  };
   return (
     <div
       style={{
-        ...panelStyle,
-        width: layoutMode.compact
-          ? 'calc(100vw - 12px)'
-          : 'min(1680px, calc(100vw - 18px))',
-        maxHeight: layoutMode.compact ? 'calc(100dvh - 12px)' : 'calc(100dvh - 18px)',
-        overflowY: 'auto',
-        padding: layoutMode.compact ? '14px' : '20px 22px 24px',
+        position: 'fixed',
+        inset: 0,
+        width: '100vw',
+        height: '100dvh',
+        overflow: 'hidden',
         color: '#17345c',
       }}
     >
       <div
         style={{
-          display: 'grid',
-          gap: 18,
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(circle at 20% 10%, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0) 36%), linear-gradient(180deg, rgba(255,249,240,0.8), rgba(244,244,238,0.72))',
+        }}
+      />
+      <div
+        style={{
+          ...panelStyle,
+          position: 'absolute',
+          inset: screenInset,
+          borderRadius: 32,
+          overflow: 'hidden',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left: topOverlayInset,
+          right: topOverlayInset,
+          top: topOverlayInset,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 16,
+          zIndex: 40,
+          pointerEvents: 'none',
         }}
       >
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 16,
-            flexWrap: 'wrap',
+            ...overlayCardStyle,
+            padding: layoutMode.compact ? '12px 14px' : '14px 18px',
+            maxWidth: layoutMode.compact ? 'calc(100vw - 142px)' : 520,
+            pointerEvents: 'auto',
           }}
         >
           <div>
             <div
               style={{
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 800,
                 letterSpacing: 1.4,
                 textTransform: 'uppercase',
@@ -3592,7 +4049,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
             </div>
             <h2
               style={{
-                fontSize: 'clamp(30px, 4vw, 46px)',
+                fontSize: layoutMode.compact ? 'clamp(26px, 6vw, 34px)' : 'clamp(30px, 4vw, 44px)',
                 lineHeight: 1.04,
                 margin: 0,
                 whiteSpace: 'pre-line',
@@ -3604,61 +4061,102 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
               {roomTheme?.tagline || 'storybook room shell'}
             </div>
           </div>
-          <button id="builder-room-back-btn" type="button" onClick={onBack} style={actionButtonStyle}>
-            Back To World
-          </button>
         </div>
-
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: layoutMode.stacked
-              ? '1fr'
-              : 'minmax(0, 2.12fr) minmax(220px, 268px)',
-            gap: 18,
-            alignItems: 'start',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+            justifyContent: 'flex-end',
+            pointerEvents: 'auto',
           }}
         >
           <div
             style={{
-              padding: layoutMode.compact ? 10 : 14,
-              borderRadius: 30,
-              background:
-                'linear-gradient(180deg, rgba(255,255,255,0.46), rgba(255,255,255,0.16) 60%, rgba(255,255,255,0.12) 100%)',
-              boxShadow:
-                'inset 0 1px 0 rgba(255,255,255,0.82), 0 24px 52px rgba(15, 23, 42, 0.12)',
+              ...overlayCardStyle,
+              padding: '10px 14px',
+              display: 'grid',
+              gap: 2,
+              minWidth: 108,
+            }}
+          >
+            <div style={compactLabelStyle}>Furnished</div>
+            <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{roomItems.length}</div>
+          </div>
+          <button id="builder-room-back-btn" type="button" onClick={onBack} style={actionButtonStyle}>
+            Back To World
+          </button>
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          left: topOverlayInset,
+          right: topOverlayInset,
+          top: stageTopInset,
+          bottom: stageBottomInset,
+        }}
+      >
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             <div
-              id="builder-room-grid"
               style={{
-                position: 'relative',
                 width: '100%',
-                maxWidth: roomDisplayWidth + (layoutMode.compact ? 16 : 22),
-                minHeight: roomDisplayHeight + (layoutMode.compact ? 16 : 22),
-                margin: '0 auto',
-                padding: layoutMode.compact ? 8 : 10,
-                borderRadius: 26,
-                background:
-                  'linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.08))',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
               <div
+                id="builder-room-grid"
                 style={{
                   position: 'relative',
-                  width: roomDisplayWidth,
-                  height: roomDisplayHeight,
-                  margin: '0 auto',
+                  width: roomDisplayWidth + (layoutMode.compact ? 10 : 14),
+                  height: roomDisplayHeight + (layoutMode.compact ? 10 : 14),
+                  padding: layoutMode.compact ? 5 : 7,
+                  borderRadius: 28,
+                  background:
+                    'linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08))',
+                  boxShadow: '0 24px 44px rgba(15, 23, 42, 0.16)',
                 }}
               >
                 <div
-                  id="builder-room-stage"
-                  ref={roomRef}
-                  onPointerDown={handleRoomPointerDown}
                   style={{
                     position: 'absolute',
                     left: 0,
                     top: 0,
+                    right: 0,
+                    bottom: 0,
+                    margin: 'auto',
+                    width: roomDisplayWidth,
+                    height: roomDisplayHeight,
+                  }}
+                >
+                  <div
+                    id="builder-room-stage"
+                    ref={roomRef}
+                    onPointerDown={handleRoomPointerDown}
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
                     width: roomWidth,
                     height: roomHeight,
                     transform: `scale(${roomStageScale})`,
@@ -3863,181 +4361,82 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                       pointerEvents: 'none',
                     }}
                   >
-                      {'Guide the unicorn.\nRoom friends wander and chat.\nDrag decor in when ready.'}
+                      {'Guide the unicorn.\nThe room cast wanders and chats.\nDrag decor in when ready.'}
                   </div>
                 )}
               </div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
           <div
             style={{
+              position: 'absolute',
+              right: 0,
+              top: layoutMode.compact ? 0 : 8,
+              width: layoutMode.compact ? 228 : 280,
               display: 'grid',
-              gap: 14,
+              gap: 10,
+              zIndex: 24,
             }}
           >
             <div
               style={{
-                background: 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
+                ...overlayCardStyle,
+                padding: '12px 14px',
+                display: 'grid',
+                gap: 10,
               }}
             >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                  marginBottom: 8,
-                }}
-              >
-              Room Rules
-            </div>
-            <div style={{ whiteSpace: 'pre-line', lineHeight: 1.34, fontSize: 15 }}>
-                {'Click the room to guide the unicorn.\nDrag from the tray.\nRoom friends chat as you decorate.'}
-            </div>
-          </div>
-
-          <div
-            style={{
-                background: 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                  marginBottom: 8,
-                }}
-              >
-              Furnished Tonight
-            </div>
-            <div style={{ fontSize: 34, fontWeight: 800 }}>{roomItems.length}</div>
-            <div style={{ marginTop: 4, fontSize: 15 }}>
-              {roomItems.length === 1 ? 'room piece' : 'room pieces'}
-            </div>
-          </div>
-
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                  marginBottom: 8,
-                }}
-              >
-                Room Theme
+              <div style={compactLabelStyle}>Room Control</div>
+              <div style={{ fontSize: 14, lineHeight: 1.32 }}>
+                {'Click to guide.\nDrag decor from the dock.\nThe room cast wanders while you build.'}
               </div>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>
-                {roomTheme?.name || house.name}
+              <div
+                style={{
+                  display: 'grid',
+                  gap: 6,
+                  paddingTop: 2,
+                  borderTop: '1px solid rgba(23, 52, 92, 0.08)',
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.72 }}>
+                  {roomSocialState.social?.activeLine?.speaker || 'Room'}
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.28 }}>
+                  {roomSocialState.social?.activeLine?.text || 'The room is settled and waiting for the next hello.'}
+                </div>
               </div>
-              <div style={{ marginTop: 4, fontSize: 14, lineHeight: 1.34, opacity: 0.78 }}>
-                {roomTheme?.tagline || 'storybook space'}
+              <div
+                style={{
+                  display: 'grid',
+                  gap: 4,
+                  paddingTop: 2,
+                  borderTop: '1px solid rgba(23, 52, 92, 0.08)',
+                }}
+              >
+                <div style={{ ...compactLabelStyle, fontSize: 10 }}>Room Echo</div>
+                <div style={{ fontSize: 13.5, lineHeight: 1.28 }}>
+                  {roomReactionState.activeReaction
+                    ? `${roomReactionState.activeReaction.itemName} answers with ${roomReactionState.activeReaction.beatLabel || roomReactionState.activeReaction.reactionLabel}.`
+                    : roomItems.length === 0
+                      ? 'Add a room piece near the cast to wake the room.'
+                      : 'Move a room piece near the cast to wake the room.'}
+                </div>
               </div>
             </div>
 
             <div
               style={{
-                background: 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
+                ...overlayCardStyle,
+                padding: '12px 14px',
                 display: 'grid',
                 gap: 8,
               }}
             >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                }}
-              >
-                Room Mood
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 800, opacity: 0.72 }}>
-                {roomSocialState.social?.activeLine?.speaker || 'Room'}
-              </div>
-              <div style={{ fontSize: 15, lineHeight: 1.34 }}>
-                {roomSocialState.social?.activeLine?.text || 'The room is settled and waiting for the next hello.'}
-              </div>
-            </div>
-
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
-                display: 'grid',
-                gap: 8,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                }}
-              >
-                Room Echo
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 800, opacity: 0.72 }}>
-                {roomReactionState.activeReaction?.speaker || 'Quiet decor'}
-              </div>
-              <div style={{ fontSize: 15, lineHeight: 1.34 }}>
-                {roomReactionState.activeReaction
-                  ? `${roomReactionState.activeReaction.itemName} answers with ${roomReactionState.activeReaction.beatLabel || roomReactionState.activeReaction.reactionLabel}.`
-                  : roomItems.length === 0
-                    ? 'Add a room piece near the cast to wake the room.'
-                    : 'Move a room piece near the cast to wake the room.'}
-              </div>
-              <div style={{ fontSize: 12, opacity: 0.72 }}>
-                {roomReactionState.activeReaction
-                  ? `${roomReactionState.activeReaction.count} piece${roomReactionState.activeReaction.count === 1 ? '' : 's'} answer right now.`
-                  : 'Nearby voices can stir lamps, seats, plants, and bright little treasures.'}
-              </div>
-            </div>
-
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
-                display: 'grid',
-                gap: 8,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                }}
-              >
-                Room Cast
-              </div>
+              <div style={compactLabelStyle}>Room Cast</div>
               {[roomSocialState.player, ...npcActors].filter(Boolean).map((actor) => (
                 <div
                   key={`cast-${actor.id || actor.name}`}
@@ -4046,7 +4445,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: 8,
-                    fontSize: 14,
+                    fontSize: 13.5,
                     fontWeight: actor.id ? 700 : 800,
                   }}
                 >
@@ -4060,25 +4459,27 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                   >
                     <span
                       style={{
-                        width: 10,
-                        height: 10,
+                        width: 9,
+                        height: 9,
                         borderRadius: '50%',
                         background: actor.accentColor || actor.bubbleTone || roomTheme?.accent || '#f4b457',
                         boxShadow: '0 0 0 3px rgba(255,255,255,0.56)',
                         flexShrink: 0,
                       }}
                     />
-                    <span>{actor.name}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {actor.name}
+                    </span>
                   </div>
                   <span
                     style={{
-                      padding: '3px 7px',
+                      padding: '2px 7px',
                       borderRadius: 999,
                       background: 'rgba(255,255,255,0.76)',
-                      fontSize: 11,
+                      fontSize: 10.5,
                       fontWeight: 800,
                       textTransform: 'uppercase',
-                      letterSpacing: 0.5,
+                      letterSpacing: 0.45,
                       opacity: 0.78,
                       flexShrink: 0,
                     }}
@@ -4088,104 +4489,134 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                 </div>
               ))}
             </div>
+          </div>
 
+          <div
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: 'flex',
+              alignItems: 'stretch',
+              gap: 12,
+              zIndex: 30,
+            }}
+          >
             <div
               style={{
-                background: 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
+                ...overlayCardStyle,
+                flex: 1,
+                minWidth: 0,
+                padding: layoutMode.compact ? '10px 10px 10px 12px' : '12px 12px 12px 14px',
                 display: 'grid',
                 gap: 10,
               }}
             >
               <div
                 style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  flexWrap: 'wrap',
                 }}
               >
-                Starter Tray
+                <div>
+                  <div style={compactLabelStyle}>Inventory Dock</div>
+                  <div style={{ fontSize: 13.5, lineHeight: 1.28, opacity: 0.8 }}>
+                    Drag furniture straight into the room. No page scrolling.
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.78 }}>
+                  {roomTheme?.name || house.name}
+                </div>
               </div>
-              {trayItems.map((furniture) => (
-                <button
-                  key={furniture.id}
-                  id={`builder-tray-${furniture.id}`}
-                  type="button"
-                  onPointerDown={(event) => beginTrayDrag(furniture, event)}
-                  style={dragCardStyle}
-                >
-                  <div
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  overflowX: 'auto',
+                  paddingBottom: 2,
+                  scrollbarWidth: 'thin',
+                }}
+              >
+                {trayItems.map((furniture) => (
+                  <button
+                    key={furniture.id}
+                    id={`builder-tray-${furniture.id}`}
+                    type="button"
+                    onPointerDown={(event) => beginTrayDrag(furniture, event)}
                     style={{
-                      position: 'relative',
-                      width: 52,
-                      height: 52,
-                      borderRadius: 16,
-                      background: 'rgba(248, 250, 252, 0.96)',
-                      boxShadow: 'inset 0 0 0 1px rgba(23, 52, 92, 0.08)',
+                      ...dragCardStyle,
+                      minWidth: layoutMode.compact ? 214 : 238,
+                      padding: '12px 12px',
                       flexShrink: 0,
                     }}
                   >
-                    <FurnitureArt
-                      item={{
-                        ...furniture,
-                        typeId: furniture.id,
+                    <div
+                      style={{
+                        position: 'relative',
+                        width: 52,
+                        height: 52,
+                        borderRadius: 16,
+                        background: 'rgba(248, 250, 252, 0.96)',
+                        boxShadow: 'inset 0 0 0 1px rgba(23, 52, 92, 0.08)',
+                        flexShrink: 0,
                       }}
-                    />
-                  </div>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: 15, fontWeight: 800 }}>{furniture.name}</div>
-                    <div style={{ fontSize: 12, opacity: 0.72 }}>drag into room</div>
-                  </div>
-                </button>
-              ))}
+                    >
+                      <FurnitureArt
+                        item={{
+                          ...furniture,
+                          typeId: furniture.id,
+                        }}
+                      />
+                    </div>
+                    <div style={{ textAlign: 'left', minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 800 }}>{furniture.name}</div>
+                      <div style={{ fontSize: 12, opacity: 0.72 }}>drag into room</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div
               ref={removeZoneRef}
               id="builder-room-remove-zone"
               style={{
-                background: dragState?.source === 'room' && dragState.insideRemoveZone
-                  ? 'linear-gradient(180deg, rgba(255, 222, 222, 0.96), rgba(255, 196, 196, 0.9))'
-                  : 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
+                ...overlayCardStyle,
+                width: layoutMode.compact ? 164 : 188,
+                flexShrink: 0,
+                padding: '12px 14px',
                 border:
                   dragState?.source === 'room'
                     ? `2px dashed ${dragState.insideRemoveZone ? '#dc2626' : 'rgba(220, 38, 38, 0.34)'}`
                     : '2px dashed rgba(23, 52, 92, 0.12)',
+                background: dragState?.source === 'room' && dragState.insideRemoveZone
+                  ? 'linear-gradient(180deg, rgba(255, 222, 222, 0.98), rgba(255, 196, 196, 0.92))'
+                  : 'rgba(255,255,255,0.74)',
                 boxShadow: dragState?.source === 'room' && dragState.insideRemoveZone
                   ? '0 16px 28px rgba(220, 38, 38, 0.14)'
-                  : 'none',
+                  : overlayCardStyle.boxShadow,
                 transition: 'background 120ms ease, border-color 120ms ease, box-shadow 120ms ease',
+                display: 'grid',
+                gap: 8,
               }}
             >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                  marginBottom: 8,
-                }}
-              >
-                Remove Piece
-              </div>
-              <div style={{ fontSize: 15, lineHeight: 1.34, whiteSpace: 'pre-line' }}>
+              <div style={compactLabelStyle}>Remove Piece</div>
+              <div style={{ fontSize: 13.5, lineHeight: 1.3, whiteSpace: 'pre-line' }}>
                 {dragState?.source === 'room'
                   ? dragState.insideRemoveZone
                     ? 'Release now.\nThis room piece goes away.'
                     : 'Drag a placed piece here.\nRelease to send it away.'
-                  : 'Need a new look?\nDrag a placed piece here\nand then bring in another.'}
+                  : 'Swap decor fast.\nDrag a placed piece here.'}
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
   );
 };
 

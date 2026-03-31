@@ -11,7 +11,7 @@ import {
   BUILDER_WORLD_ROWS,
   HOUSE_TYPES,
   createInitialBuilderState,
-  getFurnitureCatalogForTheme,
+  getFurnitureCatalogForRoom,
   getHouseById,
   moveFurnitureInHouse,
   placeHouseOnTile,
@@ -465,7 +465,10 @@ const App = () => {
           };
         })());
     } else if (screen === 'builderRoom' && activeBuilderHouse) {
-      const trayItems = getFurnitureCatalogForTheme(activeBuilderHouse.roomTheme?.id);
+      const trayItems = getFurnitureCatalogForRoom(
+        activeBuilderHouse.roomTheme?.id,
+        activeBuilderHouse.id
+      );
 
       renderState = () =>
         JSON.stringify((() => {

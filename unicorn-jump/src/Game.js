@@ -66,7 +66,6 @@ const BASE_RESCUE_LEAF_WIDTH = 176;
 const BASE_RESCUE_LEAF_HEIGHT = 34;
 const BASE_FLOAT_DESCENT_SPEED = 140;
 const DIALOG_GAP_MS = 1000;
-const PLATFORM_X_PATTERN = [0, -78, 54, -36, 68, -52, 42, 0];
 const BASE_CREATURE_WIDTH = 68;
 const BASE_CREATURE_HEIGHT = 54;
 const BASE_CREATURE_INTERACTION_RADIUS = 116;
@@ -434,14 +433,126 @@ const getHorizontalBounds = (viewportWidth, metrics, platformWidth = metrics.pla
   };
 };
 
-const pickPatternedPlatformX = (index, viewportWidth, difficultyProfile, metrics) => {
-  const bounds = getHorizontalBounds(viewportWidth, metrics);
-  const centerX = viewportWidth / 2 - metrics.platformWidth / 2;
-  const offset =
-    PLATFORM_X_PATTERN[index % PLATFORM_X_PATTERN.length] *
-    difficultyProfile.patternScale *
-    metrics.patternScale;
-  return clamp(centerX + offset, bounds.minX, bounds.maxX);
+const buildStaticPlatformMotion = (baseX) => ({
+  x: baseX,
+  baseX,
+  moving: false,
+  moveAmplitude: 0,
+  moveSpeed: 0,
+  moveFrequency: 0,
+  movePhase: 0,
+  moveMinX: baseX,
+  moveMaxX: baseX,
+});
+
+const getClimbColumnCount = (viewportWidth) => {
+  if (viewportWidth <= 460) {
+    return 3;
+  }
+
+  if (viewportWidth <= 980) {
+    return 4;
+  }
+
+  return 5;
+};
+
+const getClimbPlatformLayout = (viewportWidth, metrics) => {
+  const columnCount = getClimbColumnCount(viewportWidth);
+  const margin = viewportWidth * metrics.platformMarginRatio;
+  const usableWidth = Math.max(metrics.platformWidth, viewportWidth - margin * 2);
+  const platformWidth = Math.round(
+    clamp(
+      (usableWidth - clamp(usableWidth * 0.04, 12, 28) * Math.max(0, columnCount - 1)) /
+        columnCount,
+      metrics.platformWidth * 0.56,
+      metrics.platformWidth * 0.94
+    )
+  );
+  const bounds = getHorizontalBounds(viewportWidth, metrics, platformWidth);
+  const minCenter = bounds.minX + platformWidth / 2;
+  const maxCenter = bounds.maxX + platformWidth / 2;
+
+  return {
+    columnCount,
+    platformWidth,
+    columnCenters:
+      columnCount <= 1 || maxCenter <= minCenter
+        ? [viewportWidth / 2]
+        : Array.from({ length: columnCount }, (_, index) =>
+            Math.round(minCenter + ((maxCenter - minCenter) * index) / (columnCount - 1))
+          ),
+  };
+};
+
+const getPlatformXFromCenter = (platformCenter, viewportWidth, metrics, platformWidth) => {
+  const bounds = getHorizontalBounds(viewportWidth, metrics, platformWidth);
+  return Math.round(clamp(platformCenter - platformWidth / 2, bounds.minX, bounds.maxX));
+};
+
+const getNearestColumnIndex = (platformX, platformWidth, columnCenters) => {
+  const platformCenter = platformX + platformWidth / 2;
+  let bestIndex = 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  columnCenters.forEach((columnCenter, index) => {
+    const distance = Math.abs(columnCenter - platformCenter);
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  });
+
+  return bestIndex;
+};
+
+const pickBandTargetColumn = (startColumnIndex, columnCount) => {
+  if (columnCount <= 1) {
+    return 0;
+  }
+
+  const maxShift = Math.min(columnCount - 1, columnCount <= 3 ? 1 : 2);
+  const preferredDirections = Math.random() < 0.5 ? [-1, 1] : [1, -1];
+
+  for (const direction of preferredDirections) {
+    const shift = 1 + Math.floor(Math.random() * maxShift);
+    const nextIndex = clamp(startColumnIndex + shift * direction, 0, columnCount - 1);
+
+    if (nextIndex !== startColumnIndex) {
+      return nextIndex;
+    }
+  }
+
+  return startColumnIndex === 0 ? 1 : startColumnIndex - 1;
+};
+
+const resolveBandColumnIndex = (
+  startColumnIndex,
+  targetColumnIndex,
+  stepIndex,
+  stepCount,
+  columnCount
+) => {
+  if (stepCount <= 1) {
+    return targetColumnIndex;
+  }
+
+  let columnIndex = Math.round(
+    startColumnIndex + ((targetColumnIndex - startColumnIndex) * (stepIndex + 1)) / stepCount
+  );
+
+  if (stepIndex > 0 && stepIndex < stepCount - 1 && Math.random() < 0.34) {
+    columnIndex += Math.random() < 0.5 ? -1 : 1;
+  }
+
+  columnIndex = clamp(columnIndex, 0, columnCount - 1);
+
+  if (Math.abs(columnIndex - startColumnIndex) > 1 && stepIndex === 0) {
+    columnIndex = startColumnIndex + Math.sign(columnIndex - startColumnIndex);
+  }
+
+  return columnIndex;
 };
 
 const pickPlatformImage = (index) => PLATFORM_IMAGES[index % PLATFORM_IMAGES.length];
@@ -495,6 +606,23 @@ const buildPlatformMotion = (
     moveMinX: bounds.minX,
     moveMaxX: bounds.maxX,
   };
+};
+
+const buildClimbPlatformMotion = (
+  baseX,
+  viewportWidth,
+  difficultyProfile,
+  metrics,
+  platformWidth,
+  preferStatic = false
+) => {
+  const moveChance = 0.14 + difficultyProfile.patternScale * 0.08;
+
+  if (preferStatic || Math.random() > moveChance) {
+    return buildStaticPlatformMotion(baseX);
+  }
+
+  return buildPlatformMotion(baseX, viewportWidth, difficultyProfile, metrics, platformWidth);
 };
 
 const syncPlatformPositions = (platforms, timeMs) => {
@@ -588,64 +716,221 @@ const createLevelPlatforms = (viewport, levelHeight, difficultyProfile, metrics)
   let currentY = levelHeight - metrics.startPlatformYOffset;
   let platformIndex = 0;
   const startX = centerX;
+  const climbLayout = getClimbPlatformLayout(viewport.width, metrics);
+  const minStepGap = Math.max(58, difficultyProfile.minGap * metrics.gapScale * 0.78);
+  const maxStepGap = Math.max(minStepGap + 18, difficultyProfile.maxGap * metrics.gapScale * 1.06);
+  let currentColumnIndex = getNearestColumnIndex(
+    startX,
+    metrics.platformWidth,
+    climbLayout.columnCenters
+  );
+  let bandIndex = 0;
 
   platforms.push({
     id: `platform-${platformIndex}`,
-    x: startX,
-    baseX: startX,
+    ...buildStaticPlatformMotion(startX),
     y: currentY,
     width: metrics.platformWidth,
     height: metrics.platformHeight,
     image: pickPlatformImage(platformIndex),
     isGoal: false,
-    moving: false,
-    moveAmplitude: 0,
-    moveSpeed: 0,
-    moveFrequency: 0,
-    movePhase: 0,
-    moveMinX: startX,
-    moveMaxX: startX,
+    columnIndex: currentColumnIndex,
+    bandIndex: -1,
+    support: false,
   });
   platformIndex += 1;
 
-  while (currentY > metrics.goalPlatformY + difficultyProfile.maxGap * metrics.gapScale * 1.35) {
-    const nextGap =
+  while (currentY > metrics.goalPlatformY + maxStepGap * 1.55) {
+    const bandHeight =
       (difficultyProfile.minGap +
         Math.random() * (difficultyProfile.maxGap - difficultyProfile.minGap)) *
-      metrics.gapScale;
-    currentY -= nextGap;
-    const baseX = pickPatternedPlatformX(platformIndex, viewport.width, difficultyProfile, metrics);
-    const motion = buildPlatformMotion(baseX, viewport.width, difficultyProfile, metrics);
+      metrics.gapScale *
+      (3 + Math.random() * 2);
+    const bandTopY = Math.max(metrics.goalPlatformY + minStepGap * 0.75, currentY - bandHeight);
+    const bandSteps = Math.max(
+      3,
+      Math.round((currentY - bandTopY) / ((minStepGap + maxStepGap) * 0.5))
+    );
+    const bandStartColumnIndex = currentColumnIndex;
+    const bandTargetColumnIndex = pickBandTargetColumn(
+      bandStartColumnIndex,
+      climbLayout.columnCount
+    );
+    let stepIndex = 0;
 
-    platforms.push({
-      id: `platform-${platformIndex}`,
-      ...motion,
-      y: currentY,
-      width: metrics.platformWidth,
-      height: metrics.platformHeight,
-      image: pickPlatformImage(platformIndex),
-      isGoal: false,
-    });
-    platformIndex += 1;
+    while (
+      stepIndex < bandSteps &&
+      currentY > bandTopY + minStepGap * 0.35 &&
+      currentY > metrics.goalPlatformY + minStepGap * 1.15
+    ) {
+      const previousPlatformY = currentY;
+      const remainingSteps = bandSteps - stepIndex;
+      const remainingBandHeight = currentY - bandTopY;
+      const maxGapForStep = Math.min(
+        maxStepGap,
+        remainingBandHeight - minStepGap * Math.max(0, remainingSteps - 1)
+      );
+      const gapCeiling = Math.max(minStepGap, maxGapForStep);
+      const nextGap = minStepGap + Math.random() * Math.max(0, gapCeiling - minStepGap);
+      const nextPlatformY = previousPlatformY - nextGap;
+      const columnIndex =
+        stepIndex === bandSteps - 1
+          ? bandTargetColumnIndex
+          : resolveBandColumnIndex(
+              bandStartColumnIndex,
+              bandTargetColumnIndex,
+              stepIndex,
+              bandSteps,
+              climbLayout.columnCount
+            );
+      const isBandLanding = stepIndex === bandSteps - 1;
+      const platformWidth = isBandLanding
+        ? Math.round(
+            clamp(climbLayout.platformWidth * 1.12, climbLayout.platformWidth, metrics.platformWidth)
+          )
+        : climbLayout.platformWidth;
+      const baseX = getPlatformXFromCenter(
+        climbLayout.columnCenters[columnIndex],
+        viewport.width,
+        metrics,
+        platformWidth
+      );
+
+      platforms.push({
+        id: `platform-${platformIndex}`,
+        ...buildClimbPlatformMotion(
+          baseX,
+          viewport.width,
+          difficultyProfile,
+          metrics,
+          platformWidth,
+          isBandLanding || stepIndex === 0
+        ),
+        y: Math.round(nextPlatformY),
+        width: platformWidth,
+        height: metrics.platformHeight,
+        image: pickPlatformImage(platformIndex),
+        isGoal: false,
+        columnIndex,
+        bandIndex,
+        support: false,
+      });
+      platformIndex += 1;
+
+      const supportOptions = [columnIndex - 1, columnIndex + 1, bandStartColumnIndex, bandTargetColumnIndex]
+        .filter((value, index, values) => {
+          if (value < 0 || value >= climbLayout.columnCount || value === columnIndex) {
+            return false;
+          }
+
+          return values.indexOf(value) === index;
+        });
+      const shouldAddSupport =
+        supportOptions.length > 0 &&
+        nextGap >= minStepGap * 0.9 &&
+        (stepIndex === 0 || stepIndex === bandSteps - 1 || Math.random() < 0.72);
+
+      if (shouldAddSupport) {
+        const supportColumnIndex =
+          supportOptions[Math.floor(Math.random() * supportOptions.length)];
+        const supportWidth = Math.round(
+          clamp(climbLayout.platformWidth * 0.82, 84, climbLayout.platformWidth)
+        );
+        const supportY = Math.round(
+          nextPlatformY + clamp(nextGap * (0.28 + Math.random() * 0.16), 18, 46)
+        );
+
+        if (supportY < previousPlatformY - 12) {
+          const supportBaseX = getPlatformXFromCenter(
+            climbLayout.columnCenters[supportColumnIndex],
+            viewport.width,
+            metrics,
+            supportWidth
+          );
+
+          platforms.push({
+            id: `platform-${platformIndex}`,
+            ...buildClimbPlatformMotion(
+              supportBaseX,
+              viewport.width,
+              difficultyProfile,
+              metrics,
+              supportWidth,
+              true
+            ),
+            y: supportY,
+            width: supportWidth,
+            height: metrics.platformHeight,
+            image: pickPlatformImage(platformIndex),
+            isGoal: false,
+            columnIndex: supportColumnIndex,
+            bandIndex,
+            support: true,
+          });
+          platformIndex += 1;
+        }
+      }
+
+      currentY = nextPlatformY;
+      currentColumnIndex = columnIndex;
+      stepIndex += 1;
+    }
+
+    bandIndex += 1;
   }
 
   const goalX = viewport.width / 2 - metrics.goalPlatformWidth / 2;
+  const goalColumnIndex = getNearestColumnIndex(
+    goalX,
+    metrics.goalPlatformWidth,
+    climbLayout.columnCenters
+  );
+
+  while (currentY > metrics.goalPlatformY + maxStepGap * 1.02) {
+    const gapToGoal = currentY - metrics.goalPlatformY;
+    const nextGap = clamp(gapToGoal / 2, minStepGap * 0.9, maxStepGap * 1.02);
+    const nextColumnIndex =
+      currentColumnIndex === goalColumnIndex
+        ? currentColumnIndex
+        : currentColumnIndex + Math.sign(goalColumnIndex - currentColumnIndex);
+    const approachWidth = Math.round(
+      clamp(climbLayout.platformWidth * 1.08, climbLayout.platformWidth, metrics.platformWidth)
+    );
+    const baseX = getPlatformXFromCenter(
+      climbLayout.columnCenters[nextColumnIndex],
+      viewport.width,
+      metrics,
+      approachWidth
+    );
+
+    currentY -= nextGap;
+    platforms.push({
+      id: `platform-${platformIndex}`,
+      ...buildStaticPlatformMotion(baseX),
+      y: Math.round(currentY),
+      width: approachWidth,
+      height: metrics.platformHeight,
+      image: pickPlatformImage(platformIndex),
+      isGoal: false,
+      columnIndex: nextColumnIndex,
+      bandIndex,
+      support: false,
+    });
+    platformIndex += 1;
+    currentColumnIndex = nextColumnIndex;
+  }
+
   platforms.push({
     id: 'goal-platform',
-    x: goalX,
-    baseX: goalX,
+    ...buildStaticPlatformMotion(goalX),
     y: metrics.goalPlatformY,
     width: metrics.goalPlatformWidth,
     height: metrics.platformHeight,
     image: pickPlatformImage(platformIndex),
     isGoal: true,
-    moving: false,
-    moveAmplitude: 0,
-    moveSpeed: 0,
-    moveFrequency: 0,
-    movePhase: 0,
-    moveMinX: goalX,
-    moveMaxX: goalX,
+    columnIndex: goalColumnIndex,
+    bandIndex: bandIndex + 1,
+    support: false,
   });
 
   return platforms.sort((left, right) => left.y - right.y);
@@ -3539,6 +3824,8 @@ const Game = ({
             width: platform.width,
             height: platform.height,
             isGoal: platform.isGoal,
+            column: platform.columnIndex,
+            support: Boolean(platform.support),
             moving: platform.moving,
             frozen: platform.frozenUntil > state.timeMs,
             moveSpeed: Math.round(platform.moveSpeed || 0),

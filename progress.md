@@ -1572,3 +1572,66 @@ TODO:
 TODO:
 - The next strongest `P2` art pass is to scale and deepen the room cast one more step so those themed NPCs read more hero-like against the now-richer room shells.
 - After that, the best follow-up is making a few theme-specific furniture families animate in character-specific ways instead of only sharing the generic room motion layer.
+
+2026-03-30:
+- Took the next `P2` room-content commitment and broke the old fixed `3 furniture / 2 NPC` template.
+- Updated `unicorn-jump/src/builderState.js`:
+  - expanded every destination furniture pack well past the old `3`-item minimum by adding new period-matched pieces across all `9` room themes;
+  - added new object families (`cushion`, `vase`, `fountain`, `shelf`) so the extra tray items are not just recolors of the same silhouettes;
+  - added `getFurnitureCatalogForRoom(...)` so each house instance gets a deterministic rotated tray order instead of the exact same list order every time.
+- Updated `unicorn-jump/src/BuilderRoom.js`:
+  - replaced the fixed two-NPC room generator with a seeded cast builder that now produces `3` to `5` themed NPCs depending on the destination room instance;
+  - widened the room-art runtime so extra cast members get names, mood state, speech, motion, art variants, and cast-panel entries instead of being fake duplicates;
+  - added render support and reaction defaults for the new furniture families, then tightened the cast anchor spacing so fuller rooms do not collapse into a single cluster.
+- Updated `unicorn-jump/src/App.js`:
+  - `render_game_to_text()` now reports the same room-specific tray order the live builder room uses, so automation can verify actual tray size and contents.
+- Updated `unicorn-jump/scripts/verify_builder_room_npc_art.mjs`:
+  - the direct room-art sweep now records `trayCount` and a tray sample in addition to NPC art metadata, which makes the room-population expansion testable in text state.
+- Validation after the room-population pass:
+  - `npm run build` passed after the full content expansion and again after the cast-spacing adjustment.
+  - Required shared web-game client verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-population-smoke/`.
+  - Focused direct browser verification wrote fresh artifacts to:
+    - `unicorn-jump/output/web-game/p2-room-population-social-check/`, where `summary.json` confirms the Korean Garden room now has `4` live NPCs with no browser errors;
+    - `unicorn-jump/output/web-game/p2-room-population-art-direct/`, where `summary.json` confirms room trays now carry `6-7` pieces and room casts now vary between `3` and `5` NPCs across the `9` destination themes, with no browser errors.
+
+TODO:
+- The next strongest `P2` pass is to make the added furniture families even more visually distinct per destination, because the count is better now but some silhouettes still share too much construction logic.
+- After that, push the larger room casts toward more bespoke art variants so the extra NPCs feel like siblings in a family, not just seeded members of the same species line.
+
+2026-03-30:
+- Reworked climb layout generation in `unicorn-jump/src/Game.js` to make the ascent read as tall vertical bands instead of a single fixed x-pattern.
+- Updated `unicorn-jump/src/Game.js`:
+  - removed the old patterned `pickPatternedPlatformX(...)` lane logic;
+  - added viewport-based climb columns (`3` on small screens, `4-5` on wider screens) with narrower platform widths so multiple real jump lanes can exist side by side;
+  - changed climb generation to build tall bands whose overall height is randomly scaled to roughly `3x-5x` a normal gap, while each band is filled with staggered main platforms plus support platforms in between;
+  - kept the start / goal anchors stable, and added lane metadata (`column`, `support`) to `render_game_to_text()` so the new spacing is easy to verify.
+- Validation after the climb-spacing pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke verification wrote fresh artifacts to `output/web-game/climb-columns-smoke/`; `shot-0.png` shows the climb stack distributed across multiple columns above the landing scene, and `state-0.json` reports visible platforms across distinct `column` values instead of a single patterned lane.
+  - Focused direct browser verification wrote fresh artifacts to `output/web-game/climb-columns-verified/`, `output/web-game/climb-columns-verified-2/`, and `output/web-game/climb-columns-verified-3/`:
+    - the creature tap path succeeds and flips `quest.started` to `true`;
+    - the saved text states consistently show the new tall-band layout with support steps and multi-column distribution;
+    - automated gate-entry clicks were flaky in this interaction path, so the climb layout itself was verified from the live visible-platform stack rather than a saved post-gate state.
+
+TODO:
+- If the next pass stays on the climb, expose a small landing-scene test helper for `worldGateTap` so automated browser checks can enter climb mode without depending on fragile screen-position clicks.
+- After that, tune the new band generator on a narrow viewport if the `3`-column mobile path feels too dense or too forgiving in live play.
+
+2026-03-30:
+- Reworked the `P2` builder-room shell so furnishing no longer requires vertical page scrolling.
+- Updated `unicorn-jump/src/BuilderRoom.js`:
+  - replaced the old document-style two-column room layout with a fullscreen fixed shell that pins the room to the viewport at `100vw x 100dvh`;
+  - moved room controls into compact overlay cards and converted the furniture tray into a bottom inventory dock that stays on screen while furnishing;
+  - folded the remove zone into the same always-visible lower control band instead of leaving it below the fold;
+  - tightened the room-stage sizing rules so the playable room claims most of the viewport rather than sharing space with a tall sidebar;
+  - added mount-time scroll locking on `body` and `html` so the builder room behaves like a full-screen game scene instead of a long page.
+- Validation after the builder-room fullscreen-layout pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-layout-smoke/`.
+  - Focused direct browser verification wrote fresh artifacts to `unicorn-jump/output/web-game/p2-room-layout-direct/`:
+    - `summary.json` records `scrollLocked: true`, `trayVisible: true`, `removeVisible: true`, and no browser errors;
+    - `room-layout.png` shows the room stage occupying most of the viewport with the inventory dock and control overlays pinned on top of the scene.
+
+TODO:
+- The next refinement on this shell is to make the bottom inventory dock even denser on smaller laptop heights, so more pieces can stay visible before horizontal scrolling kicks in.
+- After that, consider letting the overlay cards auto-hide or collapse while dragging so the room gets maximum clean stage area during furnishing.
