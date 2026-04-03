@@ -3379,6 +3379,631 @@ const getLandingGroundTheme = (biomeId) => {
   };
 };
 
+const renderLandingBackdropScene = ({
+  biome,
+  worldScene,
+  timeMs,
+  cameraY,
+  compactHud,
+  landingVillageSpriteSrc,
+  worldLandmarkSpriteSrc,
+  worldGateSpriteSrc,
+}) => {
+  if (!worldScene) {
+    return null;
+  }
+
+  const width = Math.round(worldScene.platform.width * 1.34);
+  const height = compactHud ? 210 : 270;
+  const left = Math.round(worldScene.platform.x - (width - worldScene.platform.width) / 2);
+  const top = Math.round(worldScene.platform.y - cameraY - height + (compactHud ? 52 : 68));
+  const hazePulse = 0.72 + ((Math.sin(timeMs / 820) + 1) / 2) * 0.18;
+  const sceneGlow = 0.26 + ((Math.cos(timeMs / 1040) + 1) / 2) * 0.12;
+  const driftX = Math.sin(timeMs / 1900) * 10;
+  const driftY = Math.cos(timeMs / 2200) * 6;
+  const shape = (style) => ({
+    position: 'absolute',
+    pointerEvents: 'none',
+    ...style,
+  });
+  const worldTopInBackdrop = (target) => target.y - cameraY - top;
+  const echoAsset = ({
+    key,
+    src,
+    left: echoLeft,
+    top: echoTop,
+    width: echoWidth,
+    height: echoHeight,
+    opacity = 0.2,
+    flip = false,
+    rotate = 0,
+    blur = 0.6,
+  }) =>
+    src ? (
+      <img
+        key={key}
+        src={src}
+        alt=""
+        draggable={false}
+        style={shape({
+          left: echoLeft,
+          top: echoTop,
+          width: echoWidth,
+          height: echoHeight,
+          objectFit: 'contain',
+          opacity,
+          filter: `blur(${blur}px) saturate(0.84)`,
+          transform: `${flip ? 'scaleX(-1) ' : ''}rotate(${rotate}deg)`,
+          transformOrigin: 'center center',
+        })}
+      />
+    ) : null;
+  const architecturalEcho = ({
+    key,
+    src,
+    target,
+    scale = 1.72,
+    opacity = 0.11,
+    blur = 1.1,
+    rise = 14,
+    rotate = 0,
+    flip = false,
+  }) => {
+    if (!src || !target) {
+      return null;
+    }
+
+    const echoWidth = Math.round(target.width * scale);
+    const echoHeight = Math.round(target.height * scale);
+    const echoLeft = Math.round(target.x - left - (echoWidth - target.width) / 2);
+    const echoTop = Math.round(
+      worldTopInBackdrop(target) - (echoHeight - target.height) - rise
+    );
+
+    return (
+      <img
+        key={key}
+        src={src}
+        alt=""
+        draggable={false}
+        style={shape({
+          left: echoLeft,
+          top: echoTop,
+          width: echoWidth,
+          height: echoHeight,
+          objectFit: 'contain',
+          opacity,
+          filter: `blur(${blur}px) saturate(0.78) brightness(1.08)`,
+          transform: `${flip ? 'scaleX(-1) ' : ''}rotate(${rotate}deg)`,
+          transformOrigin: 'center bottom',
+        })}
+      />
+    );
+  };
+  const structuralEchoes = [
+    architecturalEcho({
+      key: 'village-echo-left',
+      src: landingVillageSpriteSrc,
+      target: worldScene.village,
+      scale: biome.id === 'storybook-forest' ? 1.92 : 1.66,
+      opacity: biome.id === 'lantern-bamboo-valley' ? 0.12 : 0.1,
+      blur: 1.2,
+      rise: compactHud ? 12 : 18,
+      rotate: -3,
+    }),
+    architecturalEcho({
+      key: 'landmark-echo-center',
+      src: worldLandmarkSpriteSrc,
+      target: worldScene.landmark,
+      scale: biome.id === 'sun-orchard' ? 1.84 : 1.72,
+      opacity: 0.12,
+      blur: 1.1,
+      rise: compactHud ? 16 : 22,
+      rotate: 2,
+    }),
+    architecturalEcho({
+      key: 'gate-echo-right',
+      src: worldGateSpriteSrc,
+      target: worldScene.gate,
+      scale: biome.id === 'bluebonnet-prairie' ? 1.78 : 1.7,
+      opacity: 0.1,
+      blur: 1.3,
+      rise: compactHud ? 14 : 20,
+      rotate: -2,
+    }),
+  ];
+
+  const baseScene = (
+    <>
+      <div
+        style={shape({
+          inset: 0,
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 42%, rgba(15, 23, 42, 0.08) 100%)',
+        })}
+      />
+      <div
+        style={shape({
+          left: '8%',
+          right: '8%',
+          top: '6%',
+          height: '26%',
+          borderRadius: '50%',
+          background: biome.palette.horizonGlow,
+          opacity: hazePulse,
+          filter: 'blur(22px)',
+        })}
+      />
+      <div
+        style={shape({
+          left: '10%',
+          right: '12%',
+          bottom: '4%',
+          height: '20%',
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.1)',
+          opacity: sceneGlow,
+          filter: 'blur(30px)',
+        })}
+      />
+    </>
+  );
+
+  let scene = null;
+
+  if (biome.id === 'lantern-bamboo-valley') {
+    scene = (
+      <>
+        {echoAsset({
+          key: 'bamboo-village-left',
+          src: landingVillageSpriteSrc,
+          left: '6%',
+          top: '34%',
+          width: '18%',
+          height: '34%',
+          opacity: 0.16,
+          blur: 0.8,
+        })}
+        {echoAsset({
+          key: 'bamboo-gate-right',
+          src: worldGateSpriteSrc,
+          left: '72%',
+          top: '24%',
+          width: '18%',
+          height: '34%',
+          opacity: 0.16,
+          flip: true,
+          blur: 0.8,
+        })}
+        <div
+          style={shape({
+            left: '68%',
+            top: '14%',
+            width: 156,
+            height: 156,
+            borderRadius: '50%',
+            border: `10px solid ${biome.palette.heading}`,
+            opacity: 0.28,
+            boxShadow: '0 0 0 16px rgba(255,255,255,0.06)',
+          })}
+        />
+        {[
+          { left: '12%', width: 184, height: 118, top: '26%', color: 'rgba(52, 67, 90, 0.24)' },
+          { left: '34%', width: 210, height: 132, top: '20%', color: 'rgba(70, 105, 98, 0.18)' },
+          { left: '58%', width: 168, height: 108, top: '30%', color: 'rgba(55, 94, 86, 0.18)' },
+        ].map((mountain, index) => (
+          <div
+            key={`bamboo-mountain-${index}`}
+            style={shape({
+              left: mountain.left,
+              top: mountain.top,
+              width: mountain.width,
+              height: mountain.height,
+              clipPath: 'polygon(50% 0, 100% 100%, 0 100%)',
+              background: mountain.color,
+              transform: `translateX(${driftX * (index === 1 ? 0.25 : 0.14)}px)`,
+            })}
+          />
+        ))}
+        {[12, 25, 58, 72, 84].map((leftOffset, index) => (
+          <div
+            key={`bamboo-pole-${leftOffset}`}
+            style={shape({
+              left: `${leftOffset}%`,
+              bottom: '18%',
+              width: 16,
+              height: `${42 + (index % 2) * 8}%`,
+              borderRadius: 999,
+              background: index % 2 === 0 ? 'rgba(84, 155, 117, 0.42)' : 'rgba(63, 126, 102, 0.38)',
+            })}
+          />
+        ))}
+        {[16, 29, 74, 86].map((leftOffset, index) => (
+          <div
+            key={`bamboo-lantern-${leftOffset}`}
+            style={shape({
+              left: `${leftOffset}%`,
+              top: `${18 + (index % 2) * 9}%`,
+              width: 22,
+              height: 34,
+              borderRadius: '12px 12px 10px 10px',
+              background: 'linear-gradient(180deg, rgba(255,248,211,0.98), rgba(245, 158, 11, 0.88))',
+              boxShadow: `0 0 18px ${biome.palette.accentSoft}`,
+              opacity: 0.82,
+              transform: `translateY(${Math.sin(timeMs / 520 + index) * 4}px)`,
+            })}
+          />
+        ))}
+        <div
+          style={shape({
+            left: '22%',
+            right: '24%',
+            bottom: '26%',
+            height: 10,
+            borderRadius: 999,
+            background: 'rgba(128, 92, 60, 0.36)',
+          })}
+        />
+      </>
+    );
+  } else if (biome.id === 'highland-meadow') {
+    scene = (
+      <>
+        {echoAsset({
+          key: 'meadow-stone-ring',
+          src: worldLandmarkSpriteSrc,
+          left: '10%',
+          top: '34%',
+          width: '16%',
+          height: '28%',
+          opacity: 0.16,
+          blur: 0.9,
+        })}
+        {echoAsset({
+          key: 'meadow-cart',
+          src: landingVillageSpriteSrc,
+          left: '70%',
+          top: '38%',
+          width: '16%',
+          height: '28%',
+          opacity: 0.14,
+          blur: 0.9,
+        })}
+        {[
+          { left: '4%', width: '38%', height: '28%', top: '42%', color: 'rgba(113, 149, 133, 0.24)' },
+          { left: '24%', width: '34%', height: '22%', top: '50%', color: 'rgba(141, 176, 160, 0.2)' },
+          { left: '54%', width: '36%', height: '26%', top: '40%', color: 'rgba(97, 132, 123, 0.22)' },
+        ].map((hill, index) => (
+          <div
+            key={`meadow-hill-${index}`}
+            style={shape({
+              left: hill.left,
+              top: hill.top,
+              width: hill.width,
+              height: hill.height,
+              borderRadius: '50%',
+              background: hill.color,
+              filter: 'blur(2px)',
+            })}
+          />
+        ))}
+        {[18, 42, 68].map((leftOffset, index) => (
+          <div
+            key={`meadow-cottage-${leftOffset}`}
+            style={shape({
+              left: `${leftOffset}%`,
+              top: `${34 + (index % 2) * 6}%`,
+              width: 92,
+              height: 68,
+              borderRadius: '18px 18px 12px 12px',
+              background: 'rgba(255,255,255,0.22)',
+              border: '4px solid rgba(72, 93, 109, 0.26)',
+            })}
+          >
+            <div
+              style={shape({
+                left: -6,
+                top: -20,
+                width: 104,
+                height: 26,
+                clipPath: 'polygon(8% 100%, 50% 0, 92% 100%)',
+                background: 'rgba(72, 93, 109, 0.28)',
+              })}
+            />
+          </div>
+        ))}
+        {[
+          { left: '16%', top: '20%', width: 112, rotate: -4 },
+          { left: '58%', top: '16%', width: 136, rotate: 5 },
+        ].map((cloud, index) => (
+          <div
+            key={`meadow-cloud-${index}`}
+            style={shape({
+              left: cloud.left,
+              top: cloud.top,
+              width: cloud.width,
+              height: 40,
+              borderRadius: 999,
+              background: 'rgba(255,255,255,0.34)',
+              transform: `translateX(${Math.sin(timeMs / 1200 + index) * 10}px) rotate(${cloud.rotate}deg)`,
+              filter: 'blur(4px)',
+            })}
+          />
+        ))}
+      </>
+    );
+  } else if (biome.id === 'storybook-forest') {
+    scene = (
+      <>
+        {echoAsset({
+          key: 'story-mushroom-house',
+          src: landingVillageSpriteSrc,
+          left: '12%',
+          top: '34%',
+          width: '18%',
+          height: '34%',
+          opacity: 0.15,
+          blur: 0.7,
+        })}
+        {echoAsset({
+          key: 'story-tree',
+          src: worldLandmarkSpriteSrc,
+          left: '66%',
+          top: '20%',
+          width: '18%',
+          height: '40%',
+          opacity: 0.14,
+          blur: 0.8,
+        })}
+        {[12, 34, 58, 80].map((leftOffset, index) => (
+          <div
+            key={`story-page-${leftOffset}`}
+            style={shape({
+              left: `${leftOffset}%`,
+              top: `${16 + (index % 2) * 8}%`,
+              width: 30,
+              height: 40,
+              borderRadius: 6,
+              background: 'rgba(255, 248, 225, 0.56)',
+              border: '2px solid rgba(154, 126, 84, 0.22)',
+              transform: `rotate(${index % 2 === 0 ? -14 : 12}deg) translateY(${Math.sin(timeMs / 600 + index) * 4}px)`,
+            })}
+          />
+        ))}
+        {[18, 44, 74].map((leftOffset, index) => (
+          <div
+            key={`story-canopy-${leftOffset}`}
+            style={shape({
+              left: `${leftOffset}%`,
+              top: `${28 + index * 4}%`,
+              width: 118,
+              height: 84,
+              borderRadius: 20,
+              background: index === 1 ? 'rgba(124, 174, 104, 0.24)' : 'rgba(108, 152, 92, 0.2)',
+              boxShadow: '0 12px 20px rgba(15, 23, 42, 0.06)',
+            })}
+          />
+        ))}
+        {[22, 48, 76].map((leftOffset) => (
+          <div
+            key={`story-trunk-${leftOffset}`}
+            style={shape({
+              left: `${leftOffset}%`,
+              bottom: '20%',
+              width: 18,
+              height: 82,
+              borderRadius: 14,
+              background: 'rgba(121, 88, 56, 0.26)',
+            })}
+          />
+        ))}
+        {[16, 38, 62].map((leftOffset, index) => (
+          <div
+            key={`story-cap-${leftOffset}`}
+            style={shape({
+              left: `${leftOffset}%`,
+              bottom: `${18 + index * 2}%`,
+              width: 80,
+              height: 44,
+              borderRadius: '999px 999px 58% 58%',
+              background: index === 1 ? 'rgba(240, 154, 114, 0.24)' : 'rgba(243, 184, 120, 0.2)',
+            })}
+          />
+        ))}
+      </>
+    );
+  } else if (biome.id === 'sun-orchard') {
+    scene = (
+      <>
+        {echoAsset({
+          key: 'orchard-arbor',
+          src: worldLandmarkSpriteSrc,
+          left: '8%',
+          top: '28%',
+          width: '18%',
+          height: '36%',
+          opacity: 0.16,
+          blur: 0.8,
+        })}
+        {echoAsset({
+          key: 'orchard-gate',
+          src: worldGateSpriteSrc,
+          left: '72%',
+          top: '26%',
+          width: '16%',
+          height: '34%',
+          opacity: 0.15,
+          blur: 0.8,
+        })}
+        {[10, 30, 52, 74].map((leftOffset) => (
+          <div
+            key={`orchard-arch-${leftOffset}`}
+            style={shape({
+              left: `${leftOffset}%`,
+              top: '24%',
+              width: 108,
+              height: 116,
+              borderRadius: '56px 56px 14px 14px',
+              border: '6px solid rgba(173, 104, 53, 0.26)',
+              background: 'rgba(255,255,255,0.12)',
+            })}
+          />
+        ))}
+        {[16, 38, 60, 82].map((leftOffset, index) => (
+          <div
+            key={`orchard-fruit-${leftOffset}`}
+            style={shape({
+              left: `${leftOffset}%`,
+              top: `${18 + (index % 2) * 8}%`,
+              width: 26,
+              height: 26,
+              borderRadius: '50%',
+              background: index % 2 === 0 ? 'rgba(255, 187, 92, 0.44)' : 'rgba(255, 145, 112, 0.42)',
+              boxShadow: `0 0 16px ${biome.palette.accentSoft}`,
+            })}
+          />
+        ))}
+        <div
+          style={shape({
+            left: '42%',
+            bottom: '16%',
+            width: 128,
+            height: 72,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 50% 40%, rgba(147,232,255,0.34) 0%, rgba(28,154,183,0.14) 62%, rgba(28,154,183,0) 100%)',
+            border: '4px solid rgba(28,154,183,0.18)',
+          })}
+        />
+      </>
+    );
+  } else if (biome.id === 'bluebonnet-prairie') {
+    scene = (
+      <>
+        {echoAsset({
+          key: 'prairie-gate',
+          src: worldGateSpriteSrc,
+          left: '68%',
+          top: '24%',
+          width: '18%',
+          height: '36%',
+          opacity: 0.15,
+          blur: 0.8,
+        })}
+        {echoAsset({
+          key: 'prairie-village',
+          src: landingVillageSpriteSrc,
+          left: '10%',
+          top: '38%',
+          width: '14%',
+          height: '30%',
+          opacity: 0.14,
+          blur: 0.8,
+        })}
+        {[8, 34, 58].map((leftOffset, index) => (
+          <div
+            key={`prairie-hill-${leftOffset}`}
+            style={shape({
+              left: `${leftOffset}%`,
+              top: `${42 + index * 4}%`,
+              width: 190,
+              height: 72,
+              borderRadius: '50%',
+              background: index === 1 ? 'rgba(110, 151, 187, 0.18)' : 'rgba(94, 132, 167, 0.16)',
+            })}
+          />
+        ))}
+        {[18, 38, 58, 78].map((leftOffset, index) => (
+          <div
+            key={`prairie-windmill-${leftOffset}`}
+            style={shape({
+              left: `${leftOffset}%`,
+              top: `${26 + (index % 2) * 6}%`,
+              width: 52,
+              height: 108,
+            })}
+          >
+            <div
+              style={shape({
+                left: '46%',
+                bottom: 0,
+                width: 4,
+                height: '74%',
+                borderRadius: 999,
+                background: 'rgba(232, 241, 252, 0.3)',
+              })}
+            />
+            {[0, 45, 90, 135].map((rotation) => (
+              <div
+                key={rotation}
+                style={shape({
+                  left: '24%',
+                  top: '28%',
+                  width: '52%',
+                  height: 4,
+                  borderRadius: 999,
+                  background: 'rgba(232, 241, 252, 0.3)',
+                  transform: `rotate(${rotation + Math.sin(timeMs / 520) * 6}deg)`,
+                })}
+              />
+            ))}
+          </div>
+        ))}
+        <div
+          style={shape({
+            left: '12%',
+            right: '8%',
+            bottom: '18%',
+            height: 18,
+            background:
+              'repeating-linear-gradient(90deg, rgba(126,170,255,0.18) 0 30px, rgba(255,255,255,0) 30px 52px)',
+          })}
+        />
+      </>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left,
+        top,
+        width,
+        height,
+        pointerEvents: 'none',
+        zIndex: 8,
+        overflow: 'visible',
+      }}
+    >
+      {baseScene}
+      {structuralEchoes}
+      {scene}
+      <div
+        style={shape({
+          left: 0,
+          right: 0,
+          bottom: '-4%',
+          height: '28%',
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0.16) 46%, rgba(15,23,42,0.08) 100%)',
+        })}
+      />
+      <div
+        style={shape({
+          left: '8%',
+          right: '10%',
+          bottom: '0%',
+          height: 18,
+          borderRadius: 999,
+          background: 'rgba(255,255,255,0.12)',
+          filter: 'blur(6px)',
+          transform: `translate(${driftX * 0.12}px, ${driftY * 0.08}px)`,
+        })}
+      />
+    </div>
+  );
+};
+
 const Game = ({
   backgroundImage,
   biomeIndex = 0,
@@ -4272,6 +4897,18 @@ const Game = ({
             'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(15, 23, 42, 0.18) 100%)',
         }}
       />
+
+      {landingMode &&
+        renderLandingBackdropScene({
+          biome,
+          worldScene,
+          timeMs: renderState.timeMs,
+          cameraY: renderState.cameraY,
+          compactHud,
+          landingVillageSpriteSrc,
+          worldLandmarkSpriteSrc,
+          worldGateSpriteSrc,
+        })}
 
       {landingMode && worldScene && (
         <>

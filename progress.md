@@ -1635,3 +1635,46 @@ TODO:
 TODO:
 - The next refinement on this shell is to make the bottom inventory dock even denser on smaller laptop heights, so more pieces can stay visible before horizontal scrolling kicks in.
 - After that, consider letting the overlay cards auto-hide or collapse while dragging so the room gets maximum clean stage area during furnishing.
+2026-03-31:
+- Took the next main-world art commitment and pushed the landing scenes one tier deeper so the biomes feel more built, not just painted behind the jump path.
+- Updated `/Users/benjaminlagrone/Documents/projects/games/unicornjump/unicorn-jump/src/Game.js`:
+  - added `renderLandingBackdropScene(...)`, a new landing-only backdrop layer that sits behind the world platform and injects biome-specific secondary structure for all five worlds;
+  - gave each biome its own extra silhouette language:
+    - Lantern Bamboo Valley: mountain wedges, bamboo poles, lantern echoes, and soft village/gate ghosts;
+    - Highland Meadow: hill bands, cottages, cloud streaks, and stone/cart echoes;
+    - Storybook Forest: drifting pages, canopy blocks, trunks, caps, and softened story structure;
+    - Sun Orchard: repeating arches, fruit glows, fountain haze, and warm architectural echoes;
+    - Bluebonnet Prairie: layered hills, windmill rows, flower bands, and gate/village echoes;
+  - added a second architectural echo tier driven from the real landing layout, so the active village, landmark, and gate now also appear as enlarged faded background silhouettes positioned from the live world-scene coordinates.
+- Updated `/Users/benjaminlagrone/Documents/projects/games/unicornjump/unicorn-jump/scripts/verify_game_world_backdrops.mjs`:
+  - switched the direct verifier from `fullPage` screenshots to `#root` screenshots after confirming Playwright full-page capture was washing several otherwise-correct biome images to white;
+  - kept the same five-biome sweep and JSON summary so the visual pass stays comparable while producing trustworthy captures.
+- Validation after the world-backdrop pass:
+  - `npm run build` passed.
+  - Required shared web-game client verification wrote fresh artifacts to `/Users/benjaminlagrone/Documents/projects/games/unicornjump/unicorn-jump/output/web-game/world-backdrop-pass-smoke/`.
+  - Focused direct browser verification wrote fresh artifacts to `/Users/benjaminlagrone/Documents/projects/games/unicornjump/unicorn-jump/output/web-game/world-backdrop-pass-direct/`:
+    - `summary.json` confirms all five biomes still enter `sceneMode: "landing"` with the correct `landingSet` and no browser errors;
+    - `lantern-bamboo.png`, `highland-meadow.png`, `storybook-forest.png`, `sun-orchard.png`, and `bluebonnet-prairie.png` now show the deeper landing-scene structure without the previous blank-white capture bug.
+
+TODO:
+- The next strongest main-world art pass is biome-specific platform/ground trim depth so the climb path and the landing shelf feel as authored as the new backdrop layer.
+- After that, the best follow-up is a hub-world / splash-map art pass that carries the same architectural depth language into the world-selector screen.
+
+2026-03-31:
+- Took the next `P2` room-social commitment and made NPC interaction stateful instead of only timer-driven.
+- Updated `/Users/benjaminlagrone/Documents/projects/games/unicornjump/unicorn-jump/src/BuilderRoom.js`:
+  - added seeded per-NPC behavior state with positive personalities, niceness scores, drifting base moods, and deterministic `4/5` nearby-interaction rolls;
+  - upgraded room runtime advancement so cast members mostly mind their own business until the unicorn gets close, then a nearby encounter can bloom into a short greeting exchange;
+  - added click-to-engage routing on live NPC sprites, so pressing a room friend now sends the unicorn to a greeting spot beside that NPC and upgrades the exchange into a stronger chat / giggle interaction;
+  - exposed the new interaction metadata through builder-room text state, including `focusNpcId`, NPC personality / niceness, and the active interaction source / phase.
+- Validation after the room-NPC-interaction pass:
+  - `npm run build` passed.
+  - Required shared web-game client smoke verification wrote fresh artifacts to `/Users/benjaminlagrone/Documents/projects/games/unicornjump/unicorn-jump/output/web-game/p2-room-npc-social-smoke/`; `state-0.json` confirms the menu still renders cleanly with no browser crash on startup.
+  - Focused direct browser verification wrote fresh artifacts to `/Users/benjaminlagrone/Documents/projects/games/unicornjump/unicorn-jump/output/web-game/p2-room-npc-social-direct/`:
+    - `summary.json` confirms both interaction paths worked end-to-end: `nearbyTriggered: true`, then `clickTriggered: true`, `clickEngaged: true`, `playerMovedTowardNpc: true`, and no browser errors;
+    - `state.json` captures the engaged click conversation with `source: "click"`, `phase: "engaged"`, `player.focusNpcId: "npc-friend"`, `Little Unicorn` saying `Hehe`, and the target NPC replying with `You made my day`;
+    - `room-npc-social.png` shows the unicorn standing beside the clicked room friend while both actors display the new social bubble / emote treatment.
+
+TODO:
+- The next strongest social pass is giving each NPC family a few multi-line conversation arcs or short call-and-response beats instead of only cycling single bubbles.
+- After that, let room decor react differently to clicked conversations versus passive nearby chatter so the environment feels like it is listening too.

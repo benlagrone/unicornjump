@@ -122,6 +122,12 @@ const NPC_ACTOR_SIZE = {
   height: 42,
 };
 const ROOM_SOCIAL_NEAR_DISTANCE = 92;
+const ROOM_SOCIAL_INTERACTION_DISTANCE = 74;
+const ROOM_SOCIAL_AUTO_INTERACTION_CHANCE = 0.8;
+const ROOM_SOCIAL_CLICK_DURATION_MS = 4400;
+const ROOM_SOCIAL_NEAR_DURATION_MS = 2800;
+const ROOM_SOCIAL_NEAR_COOLDOWN_MS = 3600;
+const ROOM_SOCIAL_MISS_COOLDOWN_MS = 1500;
 const ROOM_ITEM_REACTION_DISTANCE = 124;
 const ROOM_ITEM_REACTION_TYPES = {
   lantern: 'glow',
@@ -305,7 +311,153 @@ const createRoomNpcBlueprints = (theme, roomSeed = 'room') => {
   });
 };
 
-const createInitialRoomRuntime = (roomWidth, roomHeight) => {
+const ROOM_NICE_MOODS = ['calm', 'sunny', 'curious', 'playful', 'mellow', 'chatty', 'welcoming'];
+const ROOM_NPC_PERSONALITIES = [
+  {
+    id: 'gentle',
+    label: 'gentle',
+    idleExtra: ['Soft little hum', 'Kind watch'],
+    nearbyExtra: ['Warm hello', 'Sweet little wave', 'Stay close'],
+    clickExtra: ['Hehe, you found me', 'Let us chat', 'You sparkle'],
+    approachLines: ['Coming to say hi?', 'Little hello?', 'Hehe, over here'],
+    playerNear: ['Hi friend', 'Tiny hello', 'Cozy chat'],
+    playerClick: ['Hehe', 'I came to chat', 'You seem sweet'],
+    idleEmote: 'hum',
+    nearbyEmote: 'hi',
+    clickEmote: 'giggle',
+    socialEmote: 'chat',
+    moods: ['calm', 'mellow'],
+    socialMood: 'welcoming',
+    clickMood: 'delighted',
+  },
+  {
+    id: 'playful',
+    label: 'playful',
+    idleExtra: ['Little bounce', 'Bright little wait'],
+    nearbyExtra: ['Want to play?', 'Happy hello', 'Hehe, unicorn'],
+    clickExtra: ['Giggle time', 'Let us be silly', 'Best timing'],
+    approachLines: ['Coming over?', 'Catch me here', 'Hehe, hi'],
+    playerNear: ['Play with me', 'Hi hi', 'So cute'],
+    playerClick: ['Hehe, okay', 'Let us play', 'Happy chat'],
+    idleEmote: 'hum',
+    nearbyEmote: 'yay',
+    clickEmote: 'giggle',
+    socialEmote: 'chat',
+    moods: ['playful', 'sunny'],
+    socialMood: 'playful',
+    clickMood: 'delighted',
+  },
+  {
+    id: 'curious',
+    label: 'curious',
+    idleExtra: ['Watching softly', 'Tiny wonder'],
+    nearbyExtra: ['Hello, traveler', 'What do you think?', 'New friend'],
+    clickExtra: ['Tell me everything', 'I like your sparkle', 'This is fun'],
+    approachLines: ['Coming to visit?', 'I have room for a chat', 'Hi there'],
+    playerNear: ['Hi there', 'Neat friend', 'Cute room pal'],
+    playerClick: ['Let us talk', 'Hehe, hi', 'What are you doing?'],
+    idleEmote: 'hum',
+    nearbyEmote: 'hi',
+    clickEmote: 'chat',
+    socialEmote: 'chat',
+    moods: ['curious', 'calm'],
+    socialMood: 'curious',
+    clickMood: 'chatty',
+  },
+  {
+    id: 'sunny',
+    label: 'sunny',
+    idleExtra: ['Bright little pause', 'Warm smile'],
+    nearbyExtra: ['Lovely to see you', 'Bright hello', 'You light the room'],
+    clickExtra: ['This is the best', 'Hehe, what a hello', 'You made my day'],
+    approachLines: ['Come say hi', 'Sunny little chat?', 'Over here, friend'],
+    playerNear: ['So bright', 'Nice to see you', 'Sweet hello'],
+    playerClick: ['Hi sunshine', 'Hehe', 'This feels nice'],
+    idleEmote: 'hum',
+    nearbyEmote: 'hi',
+    clickEmote: 'giggle',
+    socialEmote: 'chat',
+    moods: ['sunny', 'welcoming'],
+    socialMood: 'welcoming',
+    clickMood: 'delighted',
+  },
+];
+
+const hashString = (value = '') => {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+};
+
+const getSeededIndex = (items, seed) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return 0;
+  }
+
+  return Math.abs(seed) % items.length;
+};
+
+const getRoomNpcPersonality = (personalityId) =>
+  ROOM_NPC_PERSONALITIES.find((personality) => personality.id === personalityId)
+  || ROOM_NPC_PERSONALITIES[0];
+
+const createRoomNpcBehaviorState = (roomTheme, houseId, npcId) => {
+  const seed = hashString(`${houseId || 'room'}:${roomTheme?.id || 'theme'}:${npcId}`);
+  const personality = ROOM_NPC_PERSONALITIES[getSeededIndex(ROOM_NPC_PERSONALITIES, seed)];
+  const moodSeed = hashString(`${seed}:mood`);
+  const altMoodSeed = hashString(`${seed}:alt-mood`);
+  const niceness = Number((0.62 + (seed % 27) / 100).toFixed(2));
+
+  return {
+    seed,
+    personalityId: personality.id,
+    baseMood: personality.moods[getSeededIndex(personality.moods, moodSeed)] || personality.moods[0],
+    altMood: ROOM_NICE_MOODS[getSeededIndex(ROOM_NICE_MOODS, altMoodSeed)],
+    niceness,
+    proximityAttempts: 0,
+    proximityOffset: 1 + (seed % 4),
+    wasNearPlayer: false,
+    cooldownUntil: 0,
+    lastInteractionAt: -99999,
+  };
+};
+
+const createRoomNpcBehaviorMap = (
+  roomTheme,
+  houseId,
+  roomSeed = houseId || roomTheme?.id || 'room'
+) =>
+  Object.fromEntries(
+    createRoomNpcBlueprints(roomTheme, roomSeed).map((npc) => [
+      npc.id,
+      createRoomNpcBehaviorState(roomTheme, houseId, npc.id),
+    ])
+  );
+
+const getRoomNpcGreetingTarget = (npc, player, roomWidth, roomHeight) => {
+  const walkBounds = getRoomWalkBounds(roomWidth, roomHeight, player.width, player.height);
+  const npcCenter = getActorCenter(npc);
+  const playerCenter = getActorCenter(player);
+  const side = playerCenter.x <= npcCenter.x ? -1 : 1;
+
+  return {
+    x: clamp(
+      npcCenter.x - player.width / 2 + side * 38,
+      walkBounds.xMin,
+      walkBounds.xMax
+    ),
+    y: clamp(
+      npc.y + npc.height - player.height + 6,
+      walkBounds.yMin,
+      walkBounds.yMax
+    ),
+  };
+};
+
+const createInitialRoomRuntime = (roomWidth, roomHeight, roomTheme = null, houseId = 'room') => {
   const walkBounds = getRoomWalkBounds(
     roomWidth,
     roomHeight,
@@ -331,7 +483,10 @@ const createInitialRoomRuntime = (roomWidth, roomHeight) => {
       height: PLAYER_ACTOR_SIZE.height,
       speed: PLAYER_ACTOR_SIZE.speed,
       facing: 1,
+      focusNpcId: null,
     },
+    npcBehaviorById: createRoomNpcBehaviorMap(roomTheme, houseId, houseId),
+    interaction: null,
   };
 };
 
@@ -373,11 +528,164 @@ const advanceRoomPlayer = (player, ms, roomWidth, roomHeight) => {
   };
 };
 
-const advanceRoomRuntime = (runtime, ms, roomWidth, roomHeight) => ({
-  ...runtime,
-  timeMs: runtime.timeMs + ms,
-  player: advanceRoomPlayer(runtime.player, ms, roomWidth, roomHeight),
-});
+const advanceRoomRuntime = (
+  runtime,
+  ms,
+  roomWidth,
+  roomHeight,
+  roomTheme = null,
+  houseId = 'room'
+) => {
+  const nextTime = runtime.timeMs + ms;
+  const roomSeed = houseId || roomTheme?.id || 'room';
+  const npcs = getNpcActors(roomTheme, roomWidth, roomHeight, nextTime, roomSeed);
+  const npcBehaviorById =
+    runtime.npcBehaviorById || createRoomNpcBehaviorMap(roomTheme, roomSeed, roomSeed);
+  let nextPlayer = runtime.player ? { ...runtime.player } : null;
+  let nextInteraction = runtime.interaction ? { ...runtime.interaction } : null;
+  const nextNpcBehaviorById = {};
+
+  const getNpcById = (npcId) => npcs.find((npc) => npc.id === npcId) || null;
+
+  if (nextPlayer && nextInteraction?.npcId && nextInteraction.source === 'click') {
+    const focusNpc = getNpcById(nextInteraction.npcId);
+    if (focusNpc) {
+      const greetingTarget = getRoomNpcGreetingTarget(
+        focusNpc,
+        nextPlayer,
+        roomWidth,
+        roomHeight
+      );
+      nextPlayer = {
+        ...nextPlayer,
+        focusNpcId: focusNpc.id,
+        targetX: greetingTarget.x,
+        targetY: greetingTarget.y,
+        facing: greetingTarget.x < nextPlayer.x ? -1 : 1,
+      };
+    }
+  }
+
+  nextPlayer = advanceRoomPlayer(nextPlayer, ms, roomWidth, roomHeight);
+
+  if (nextInteraction?.npcId) {
+    const focusNpc = getNpcById(nextInteraction.npcId);
+
+    if (!focusNpc || !nextPlayer) {
+      nextInteraction = null;
+      if (nextPlayer) {
+        nextPlayer = {
+          ...nextPlayer,
+          focusNpcId: null,
+        };
+      }
+    } else {
+      const distance = getActorDistance(nextPlayer, focusNpc);
+
+      if (
+        nextInteraction.phase === 'approach'
+        && distance <= ROOM_SOCIAL_INTERACTION_DISTANCE
+      ) {
+        nextInteraction = {
+          ...nextInteraction,
+          phase: 'engaged',
+          engagedAt: nextTime,
+          endAt:
+            nextTime
+            + (nextInteraction.source === 'click'
+              ? ROOM_SOCIAL_CLICK_DURATION_MS
+              : ROOM_SOCIAL_NEAR_DURATION_MS),
+        };
+      } else if (
+        nextInteraction.phase === 'engaged'
+        && nextInteraction.endAt
+        && nextTime >= nextInteraction.endAt
+      ) {
+        nextInteraction = null;
+        nextPlayer = {
+          ...nextPlayer,
+          focusNpcId: null,
+        };
+      }
+    }
+  }
+
+  let triggeredInteraction = nextInteraction;
+
+  npcs.forEach((npc) => {
+    const previousBehavior =
+      npcBehaviorById[npc.id] || createRoomNpcBehaviorState(roomTheme, roomSeed, npc.id);
+    const nearPlayer = getActorDistance(npc, nextPlayer) < ROOM_SOCIAL_NEAR_DISTANCE;
+    const currentInteraction =
+      triggeredInteraction && triggeredInteraction.npcId === npc.id ? triggeredInteraction : null;
+    let nextBehavior = {
+      ...previousBehavior,
+      wasNearPlayer: nearPlayer,
+    };
+
+    if (currentInteraction) {
+      nextBehavior.lastInteractionAt =
+        currentInteraction.phase === 'engaged'
+          ? currentInteraction.engagedAt ?? nextTime
+          : nextBehavior.lastInteractionAt;
+      nextBehavior.cooldownUntil = Math.max(
+        nextBehavior.cooldownUntil,
+        (currentInteraction.endAt || nextTime) + ROOM_SOCIAL_NEAR_COOLDOWN_MS
+      );
+    } else if (
+      nearPlayer
+      && !previousBehavior.wasNearPlayer
+      && nextTime >= previousBehavior.cooldownUntil
+    ) {
+      const shouldInteract =
+        ((previousBehavior.proximityAttempts + previousBehavior.proximityOffset) % 5) !== 0;
+      nextBehavior.proximityAttempts = previousBehavior.proximityAttempts + 1;
+
+      if (!triggeredInteraction && shouldInteract) {
+        triggeredInteraction = {
+          npcId: npc.id,
+          source: 'nearby',
+          phase: 'engaged',
+          startedAt: nextTime,
+          engagedAt: nextTime,
+          endAt: nextTime + ROOM_SOCIAL_NEAR_DURATION_MS,
+        };
+        nextBehavior.lastInteractionAt = nextTime;
+        nextBehavior.cooldownUntil =
+          nextTime + ROOM_SOCIAL_NEAR_DURATION_MS + ROOM_SOCIAL_NEAR_COOLDOWN_MS;
+      } else if (!shouldInteract) {
+        nextBehavior.cooldownUntil = nextTime + ROOM_SOCIAL_MISS_COOLDOWN_MS;
+      }
+    }
+
+    nextNpcBehaviorById[npc.id] = nextBehavior;
+  });
+
+  if (triggeredInteraction !== nextInteraction) {
+    nextInteraction = triggeredInteraction;
+    if (nextInteraction?.source === 'nearby' && nextPlayer) {
+      nextPlayer = {
+        ...nextPlayer,
+        focusNpcId: null,
+      };
+    }
+  }
+
+  if (!nextInteraction && nextPlayer?.focusNpcId) {
+    nextPlayer = {
+      ...nextPlayer,
+      focusNpcId: null,
+    };
+  }
+
+  return {
+    ...runtime,
+    timeMs: nextTime,
+    player: nextPlayer,
+    npcBehaviorById: nextNpcBehaviorById,
+    interaction: nextInteraction,
+  };
+};
 
 const getNpcActors = (roomTheme, roomWidth, roomHeight, timeMs, roomSeed) => {
   const walkBounds = getRoomWalkBounds(
@@ -618,25 +926,123 @@ const getCycleItem = (items, timeMs, periodMs, phase = 0) => {
   return items[index] ?? items[0] ?? null;
 };
 
-const buildRoomSocialState = (runtime, roomTheme, roomWidth, roomHeight, roomSeed) => {
+const getRoomNpcDisplayMood = (behavior, personality, timeMs, interactionState, nearPlayer, speechWindow) => {
+  const driftMood =
+    Math.floor((timeMs + behavior.seed) / 7200) % 2 === 0
+      ? behavior.baseMood
+      : behavior.altMood;
+
+  if (interactionState?.source === 'click') {
+    return interactionState.phase === 'approach' ? 'expectant' : personality.clickMood;
+  }
+
+  if (interactionState) {
+    return personality.socialMood;
+  }
+
+  if (nearPlayer) {
+    return driftMood;
+  }
+
+  if (speechWindow) {
+    return personality.socialMood;
+  }
+
+  return driftMood;
+};
+
+const getRoomNpcSpeechState = (
+  personality,
+  actorScript,
+  interactionState,
+  speechWindow,
+  timeMs,
+  phaseOffset
+) => {
+  const idleLines = [...actorScript.idle, ...personality.idleExtra];
+  const nearbyLines = [...actorScript.greet, ...personality.nearbyExtra];
+  const clickLines = [...personality.clickExtra, ...actorScript.greet];
+
+  if (interactionState?.source === 'click') {
+    return {
+      speechText:
+        interactionState.phase === 'approach'
+          ? getCycleItem(personality.approachLines, timeMs, 1500, phaseOffset)
+          : getCycleItem(clickLines, timeMs, 1380, phaseOffset),
+      emote:
+        interactionState.phase === 'approach'
+          ? personality.nearbyEmote
+          : personality.clickEmote,
+    };
+  }
+
+  if (interactionState) {
+    return {
+      speechText: getCycleItem(nearbyLines, timeMs, 1620, phaseOffset),
+      emote: personality.socialEmote,
+    };
+  }
+
+  if (speechWindow) {
+    return {
+      speechText: getCycleItem(idleLines, timeMs, 2200, phaseOffset),
+      emote: personality.idleEmote,
+    };
+  }
+
+  return {
+    speechText: null,
+    emote: null,
+  };
+};
+
+const buildRoomSocialState = (
+  runtime,
+  roomTheme,
+  roomWidth,
+  roomHeight,
+  roomSeed = roomTheme?.id || 'room'
+) => {
   const player = runtime.player || null;
-  const npcs = getNpcActors(roomTheme, roomWidth, roomHeight, runtime.timeMs, roomSeed);
+  const stableRoomSeed = roomSeed || roomTheme?.id || 'room';
+  const npcBehaviorById =
+    runtime.npcBehaviorById
+    || createRoomNpcBehaviorMap(roomTheme, stableRoomSeed, stableRoomSeed);
+  const npcs = getNpcActors(roomTheme, roomWidth, roomHeight, runtime.timeMs, stableRoomSeed);
   const script = getRoomSocialScript(roomTheme?.id);
+  const interactionState = runtime.interaction || null;
   const playerIsMoving = player
     ? Math.abs(player.targetX - player.x) > 1 || Math.abs(player.targetY - player.y) > 1
     : false;
 
   const socialNpcs = npcs.map((npc, index) => {
-    const actorScript = script[npc.scriptKey] || script.friend || script.guide;
+    const behavior =
+      npcBehaviorById[npc.id]
+      || createRoomNpcBehaviorState(roomTheme, stableRoomSeed, npc.id);
+    const personality = getRoomNpcPersonality(behavior.personalityId);
+    const actorScript = npc.id === 'npc-guide' ? script.guide : script.friend;
     const nearPlayer = getActorDistance(npc, player) < ROOM_SOCIAL_NEAR_DISTANCE;
-    const speechWindow = ((runtime.timeMs + index * 1100) % 6200) < 2550;
-    const speechText = nearPlayer
-      ? getCycleItem(actorScript.greet, runtime.timeMs, 1700, index * 0.6)
-      : speechWindow
-        ? getCycleItem(actorScript.idle, runtime.timeMs, 2200, index * 0.4)
-        : null;
-    const emote = nearPlayer ? (npc.scriptKey === 'guide' ? 'hi' : 'yay') : speechWindow ? '...' : null;
-    const mood = nearPlayer ? 'welcoming' : speechWindow ? 'chatty' : index % 2 === 0 ? 'wandering' : 'dreamy';
+    const activeNpcInteraction =
+      interactionState && interactionState.npcId === npc.id ? interactionState : null;
+    const speechWindow =
+      !interactionState
+      && ((runtime.timeMs + index * 1100 + (behavior.seed % 900)) % 6400) < 2300;
+    const { speechText, emote } = getRoomNpcSpeechState(
+      personality,
+      actorScript,
+      activeNpcInteraction,
+      speechWindow,
+      runtime.timeMs,
+      index * 0.55 + (behavior.seed % 7) * 0.07
+    );
+    const mood = getRoomNpcDisplayMood(
+      behavior,
+      personality,
+      runtime.timeMs,
+      activeNpcInteraction,
+      nearPlayer,
+      speechWindow
+    );
 
     return {
       ...npc,
@@ -645,6 +1051,13 @@ const buildRoomSocialState = (runtime, roomTheme, roomWidth, roomHeight, roomSee
       speechText,
       bubbleTone: npc.accentColor,
       nearPlayer,
+      personality: personality.label,
+      personalityId: personality.id,
+      niceness: behavior.niceness,
+      interactionChance: ROOM_SOCIAL_AUTO_INTERACTION_CHANCE,
+      interactionMode: activeNpcInteraction
+        ? `${activeNpcInteraction.source}:${activeNpcInteraction.phase}`
+        : null,
     };
   });
 
@@ -658,47 +1071,111 @@ const buildRoomSocialState = (runtime, roomTheme, roomWidth, roomHeight, roomSee
     },
     null
   );
+  const activeNpc = interactionState
+    ? socialNpcs.find((npc) => npc.id === interactionState.npcId) || null
+    : null;
+  const activePersonality = activeNpc
+    ? getRoomNpcPersonality(activeNpc.personalityId)
+    : null;
 
   const playerNearNpc = Boolean(nearestNpc && nearestNpc.distance < ROOM_SOCIAL_NEAR_DISTANCE);
   const playerSpeechWindow = !playerNearNpc && ((runtime.timeMs + 900) % 7600) < 2100;
-  const playerSpeechText = playerNearNpc
-    ? getCycleItem(['Hi there', 'Cute room', 'Let us play'], runtime.timeMs, 1600, 0.2)
-    : playerIsMoving
-      ? getCycleItem(
-          ['This way', 'Tiny steps', 'Nearly there'],
+  const playerSpeechText = interactionState?.source === 'click'
+    ? interactionState.phase === 'approach'
+      ? getCycleItem(['Coming over', 'Tiny hello', 'On my way'], runtime.timeMs, 1500, 0.2)
+      : getCycleItem(
+          activePersonality?.playerClick || ['Hehe', 'Hi there', 'Let us chat'],
           runtime.timeMs,
-          1900,
-          0.1
+          1400,
+          0.2
         )
-      : playerSpeechWindow
-        ? getCycleItem(['So pretty', 'Dreamy room', 'More sparkle'], runtime.timeMs, 2100, 0.15)
-      : null;
+    : interactionState
+      ? getCycleItem(
+          activePersonality?.playerNear || ['Hi friend', 'Cute room', 'Happy hello'],
+          runtime.timeMs,
+          1500,
+          0.2
+        )
+      : playerIsMoving
+        ? getCycleItem(
+            ['This way', 'Tiny steps', 'Nearly there'],
+            runtime.timeMs,
+            1900,
+            0.1
+          )
+        : playerSpeechWindow
+          ? getCycleItem(['So pretty', 'Dreamy room', 'More sparkle'], runtime.timeMs, 2100, 0.15)
+          : null;
 
   const socialPlayer = player
     ? {
         ...player,
-        mood: playerNearNpc ? 'visiting' : playerIsMoving ? 'exploring' : 'daydreaming',
-        emote: playerNearNpc ? 'hi' : playerIsMoving ? 'go' : playerSpeechWindow ? '...' : null,
+        mood: interactionState?.source === 'click'
+          ? interactionState.phase === 'approach'
+            ? 'curious'
+            : 'playful'
+          : interactionState
+            ? 'visiting'
+            : playerNearNpc
+              ? 'visiting'
+              : playerIsMoving
+                ? 'exploring'
+                : 'daydreaming',
+        emote: interactionState?.source === 'click'
+          ? interactionState.phase === 'approach'
+            ? 'hi'
+            : activePersonality?.clickEmote || 'giggle'
+          : interactionState
+            ? activePersonality?.socialEmote || 'chat'
+            : playerNearNpc
+              ? 'hi'
+              : playerIsMoving
+                ? 'go'
+                : playerSpeechWindow
+                  ? '...'
+                  : null,
         speechText: playerSpeechText,
         bubbleTone: roomTheme?.accent || '#f472b6',
       }
     : null;
 
-  const activeNpc = socialNpcs.find((npc) => npc.nearPlayer && npc.speechText)
-    || socialNpcs.find((npc) => Boolean(npc.speechText));
-  const activeLine = activeNpc
-    ? {
-        speaker: activeNpc.name,
-        text: activeNpc.speechText,
-        mood: activeNpc.mood,
-      }
-    : socialPlayer?.speechText
+  const fallbackNpc = socialNpcs.find((npc) => npc.speechText) || null;
+  const activeLine = interactionState && activeNpc?.speechText
+    ? (() => {
+        const playerTurn =
+          interactionState.phase === 'engaged'
+          && socialPlayer?.speechText
+          && Math.floor(runtime.timeMs / 900) % 2 === 1;
+
+        return playerTurn
+          ? {
+              speaker: socialPlayer.name,
+              text: socialPlayer.speechText,
+              mood: socialPlayer.mood,
+              source: 'player',
+            }
+          : {
+              speaker: activeNpc.name,
+              text: activeNpc.speechText,
+              mood: activeNpc.mood,
+              source: 'npc',
+            };
+      })()
+    : fallbackNpc
       ? {
-          speaker: socialPlayer.name,
-          text: socialPlayer.speechText,
-          mood: socialPlayer.mood,
+          speaker: fallbackNpc.name,
+          text: fallbackNpc.speechText,
+          mood: fallbackNpc.mood,
+          source: 'npc',
         }
-      : null;
+      : socialPlayer?.speechText
+        ? {
+            speaker: socialPlayer.name,
+            text: socialPlayer.speechText,
+            mood: socialPlayer.mood,
+            source: 'player',
+          }
+        : null;
   const roomResponse = buildRoomPropResponse(
     roomTheme,
     {
@@ -718,6 +1195,20 @@ const buildRoomSocialState = (runtime, roomTheme, roomWidth, roomHeight, roomSee
     social: {
       activeLine,
       roomResponse,
+      interaction: interactionState && activeNpc
+        ? {
+            npcId: activeNpc.id,
+            npcName: activeNpc.name,
+            source: interactionState.source,
+            phase: interactionState.phase,
+            personality: activeNpc.personality,
+            niceness: activeNpc.niceness,
+            triggerChance:
+              interactionState.source === 'nearby'
+                ? ROOM_SOCIAL_AUTO_INTERACTION_CHANCE
+                : 1,
+          }
+        : null,
     },
   };
 };
@@ -804,6 +1295,7 @@ const buildRoomRuntimeSnapshot = (socialState, roomReactionState, roomTheme) => 
         width: socialState.player.width,
         height: socialState.player.height,
         facing: socialState.player.facing,
+        focusNpcId: socialState.player.focusNpcId || null,
         mood: socialState.player.mood,
         emote: socialState.player.emote,
         speechText: socialState.player.speechText,
@@ -824,6 +1316,10 @@ const buildRoomRuntimeSnapshot = (socialState, roomReactionState, roomTheme) => 
       emote: npc.emote,
       speechText: npc.speechText,
       nearPlayer: npc.nearPlayer,
+      personality: npc.personality,
+      niceness: npc.niceness,
+      interactionChance: npc.interactionChance,
+      interactionMode: npc.interactionMode,
       species: artProfile.species,
       accessory: artProfile.accessory,
     };
@@ -3638,8 +4134,12 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
   const roomDisplayWidth = Math.round(roomWidth * roomStageScale);
   const roomDisplayHeight = Math.round(roomHeight * roomStageScale);
   const runtimeIdentity = `${houseId}:${roomWidth}:${roomHeight}:${roomTheme?.id || 'room'}`;
-  const roomRuntimeRef = useRef(createInitialRoomRuntime(roomWidth, roomHeight));
-  const [roomRuntime, setRoomRuntime] = useState(() => createInitialRoomRuntime(roomWidth, roomHeight));
+  const roomRuntimeRef = useRef(
+    createInitialRoomRuntime(roomWidth, roomHeight, roomTheme, houseId)
+  );
+  const [roomRuntime, setRoomRuntime] = useState(() =>
+    createInitialRoomRuntime(roomWidth, roomHeight, roomTheme, houseId)
+  );
   const roomItems = [...(house?.room?.items ?? [])].sort((left, right) => left.y - right.y);
   const roomSocialState = buildRoomSocialState(
     roomRuntime,
@@ -3672,7 +4172,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
   const reactiveItemMap = new Map(
     roomReactionState.reactiveItems.map((item) => [item.id, item])
   );
-  const introPlayer = createInitialRoomRuntime(roomWidth, roomHeight).player;
+  const introPlayer = createInitialRoomRuntime(roomWidth, roomHeight, roomTheme, houseId).player;
   const playerHasStartedMoving = roomRuntime.player
     ? Math.hypot(
         roomRuntime.player.x - introPlayer.x,
@@ -3732,11 +4232,11 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
   }, []);
 
   useEffect(() => {
-    const initialRuntime = createInitialRoomRuntime(roomWidth, roomHeight);
+    const initialRuntime = createInitialRoomRuntime(roomWidth, roomHeight, roomTheme, houseId);
     roomRuntimeRef.current = initialRuntime;
     setRoomRuntime(initialRuntime);
     setDragState(null);
-  }, [runtimeIdentity, roomWidth, roomHeight]);
+  }, [runtimeIdentity, roomWidth, roomHeight, roomTheme, houseId]);
 
   useEffect(() => {
     roomRuntimeRef.current = roomRuntime;
@@ -3763,7 +4263,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
 
     const advanceRuntime = (ms = 1000 / 60) => {
       setRoomRuntime((current) => {
-        const next = advanceRoomRuntime(current, ms, roomWidth, roomHeight);
+        const next = advanceRoomRuntime(current, ms, roomWidth, roomHeight, roomTheme, houseId);
         roomRuntimeRef.current = next;
         return next;
       });
@@ -3776,7 +4276,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
         window.__advanceBuilderRoom = undefined;
       }
     };
-  }, [runtimeIdentity, roomWidth, roomHeight]);
+  }, [runtimeIdentity, roomWidth, roomHeight, roomTheme, houseId]);
 
   useEffect(() => {
     let animationFrameId = null;
@@ -3791,7 +4291,14 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
       lastTimestamp = timestamp;
 
       setRoomRuntime((current) => {
-        const next = advanceRoomRuntime(current, deltaMs, roomWidth, roomHeight);
+        const next = advanceRoomRuntime(
+          current,
+          deltaMs,
+          roomWidth,
+          roomHeight,
+          roomTheme,
+          houseId
+        );
         roomRuntimeRef.current = next;
         return next;
       });
@@ -3806,7 +4313,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
         window.cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [runtimeIdentity, roomWidth, roomHeight]);
+  }, [runtimeIdentity, roomWidth, roomHeight, roomTheme, houseId]);
 
   useEffect(() => {
     if (!dragState || !roomRef.current) {
@@ -3938,7 +4445,8 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
         ? bounds.width / roomRef.current.clientWidth
         : 1;
     const player =
-      roomRuntimeRef.current.player || createInitialRoomRuntime(roomWidth, roomHeight).player;
+      roomRuntimeRef.current.player
+      || createInitialRoomRuntime(roomWidth, roomHeight, roomTheme, houseId).player;
     const walkBounds = getRoomWalkBounds(roomWidth, roomHeight, player.width, player.height);
     const nextTargetX = clamp(
       (event.clientX - bounds.left) / scale - player.width / 2,
@@ -3958,7 +4466,65 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
           ...current.player,
           targetX: nextTargetX,
           targetY: nextTargetY,
+          focusNpcId: null,
           facing: nextTargetX < current.player.x ? -1 : 1,
+        },
+        interaction: null,
+      };
+      roomRuntimeRef.current = next;
+      return next;
+    });
+  };
+
+  const handleNpcPointerDown = (actor, event) => {
+    if (dragState || event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    setRoomRuntime((current) => {
+      if (!current.player) {
+        return current;
+      }
+
+      const liveNpc = getNpcActors(
+        roomTheme,
+        roomWidth,
+        roomHeight,
+        current.timeMs,
+        houseId || roomTheme?.id || 'room'
+      ).find(
+        (npc) => npc.id === actor.id
+      );
+
+      if (!liveNpc) {
+        return current;
+      }
+
+      const greetingTarget = getRoomNpcGreetingTarget(
+        liveNpc,
+        current.player,
+        roomWidth,
+        roomHeight
+      );
+      const next = {
+        ...current,
+        player: {
+          ...current.player,
+          targetX: greetingTarget.x,
+          targetY: greetingTarget.y,
+          focusNpcId: actor.id,
+          facing: greetingTarget.x < current.player.x ? -1 : 1,
+        },
+        interaction: {
+          npcId: actor.id,
+          source: 'click',
+          phase: 'approach',
+          startedAt: current.timeMs,
+          engagedAt: null,
+          endAt: null,
         },
       };
       roomRuntimeRef.current = next;
@@ -4303,27 +4869,49 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                     );
                   })}
 
-                  {roomActors.map((actor) => (
-                    <div
-                      key={`${actor.kind}-${actor.id || actor.name}`}
-                      style={{
-                        position: 'absolute',
-                        left: actor.x,
-                        top: actor.y,
-                        width: actor.width,
-                        height: actor.height,
-                        zIndex: 12 + Math.round(actor.y),
-                        pointerEvents: 'none',
-                      }}
-                    >
-                      <RoomActorBubble actor={actor} playerActor={actor.kind === 'player'} />
-                      {actor.kind === 'player' ? (
+                  {roomActors.map((actor) => {
+                    const actorStyle = {
+                      position: 'absolute',
+                      left: actor.x,
+                      top: actor.y,
+                      width: actor.width,
+                      height: actor.height,
+                      zIndex: 12 + Math.round(actor.y),
+                    };
+
+                    return actor.kind === 'player' ? (
+                      <div
+                        key={`${actor.kind}-${actor.id || actor.name}`}
+                        style={{
+                          ...actorStyle,
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        <RoomActorBubble actor={actor} playerActor />
                         <UnicornActorArt actor={actor} timeMs={roomRuntime.timeMs} />
-                      ) : (
+                      </div>
+                    ) : (
+                      <button
+                        key={`${actor.kind}-${actor.id || actor.name}`}
+                        id={`builder-room-npc-${actor.id}`}
+                        data-room-npc="true"
+                        type="button"
+                        onPointerDown={(event) => handleNpcPointerDown(actor, event)}
+                        style={{
+                          ...actorStyle,
+                          border: 0,
+                          padding: 0,
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          touchAction: 'manipulation',
+                        }}
+                        aria-label={`Visit ${actor.name}`}
+                      >
+                        <RoomActorBubble actor={actor} />
                         <RoomNpcArt actor={actor} timeMs={roomRuntime.timeMs} roomTheme={roomTheme} />
-                      )}
-                    </div>
-                  ))}
+                      </button>
+                    );
+                  })}
 
                   {dragState?.insideRoom && (
                     <div
@@ -4361,7 +4949,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                       pointerEvents: 'none',
                     }}
                   >
-                      {'Guide the unicorn.\nThe room cast wanders and chats.\nDrag decor in when ready.'}
+                      {'Guide the unicorn.\nTap a room friend to go say hi.\nDrag decor in when ready.'}
                   </div>
                 )}
               </div>
@@ -4390,9 +4978,66 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                 gap: 10,
               }}
             >
-              <div style={compactLabelStyle}>Room Control</div>
-              <div style={{ fontSize: 14, lineHeight: 1.32 }}>
-                {'Click to guide.\nDrag decor from the dock.\nThe room cast wanders while you build.'}
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: 1.2,
+                  textTransform: 'uppercase',
+                  opacity: 0.72,
+                  marginBottom: 8,
+                }}
+              >
+                Room Rules
+              </div>
+              <div style={{ whiteSpace: 'pre-line', lineHeight: 1.34, fontSize: 15 }}>
+                {'Click the room to guide the unicorn.\nTap a room friend to walk over and chat.\nNearby room friends usually say hi.'}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.62)',
+                borderRadius: 24,
+                padding: '18px 18px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: 1.2,
+                  textTransform: 'uppercase',
+                  opacity: 0.72,
+                  marginBottom: 8,
+                }}
+              >
+                Furnished Tonight
+              </div>
+              <div style={{ fontSize: 34, fontWeight: 800 }}>{roomItems.length}</div>
+              <div style={{ marginTop: 4, fontSize: 15 }}>
+                {roomItems.length === 1 ? 'room piece' : 'room pieces'}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.62)',
+                borderRadius: 24,
+                padding: '18px 18px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: 1.2,
+                  textTransform: 'uppercase',
+                  opacity: 0.72,
+                  marginBottom: 8,
+                }}
+              >
+                Room Theme
               </div>
               <div
                 style={{
@@ -4436,7 +5081,89 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                 gap: 8,
               }}
             >
-              <div style={compactLabelStyle}>Room Cast</div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: 1.2,
+                  textTransform: 'uppercase',
+                  opacity: 0.72,
+                }}
+              >
+                Room Mood
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 800, opacity: 0.72 }}>
+                {roomSocialState.social?.activeLine?.speaker || 'Room'}
+              </div>
+              <div style={{ fontSize: 15, lineHeight: 1.34 }}>
+                {roomSocialState.social?.activeLine?.text || 'The room is settled and waiting for the next hello.'}
+              </div>
+              {roomSocialState.social?.interaction && (
+                <div style={{ fontSize: 12, opacity: 0.72, lineHeight: 1.3 }}>
+                  {`${roomSocialState.social.interaction.personality} friend, ${Math.round(
+                    roomSocialState.social.interaction.niceness * 100
+                  )}% nice, ${roomSocialState.social.interaction.source === 'click' ? 'clicked chat' : 'nearby hello'}.`}
+                </div>
+              )}
+            </div>
+
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.62)',
+                borderRadius: 24,
+                padding: '18px 18px',
+                display: 'grid',
+                gap: 8,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: 1.2,
+                  textTransform: 'uppercase',
+                  opacity: 0.72,
+                }}
+              >
+                Room Echo
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 800, opacity: 0.72 }}>
+                {roomReactionState.activeReaction?.speaker || 'Quiet decor'}
+              </div>
+              <div style={{ fontSize: 15, lineHeight: 1.34 }}>
+                {roomReactionState.activeReaction
+                  ? `${roomReactionState.activeReaction.itemName} answers with ${roomReactionState.activeReaction.beatLabel || roomReactionState.activeReaction.reactionLabel}.`
+                  : roomItems.length === 0
+                    ? 'Add a room piece near the cast to wake the room.'
+                    : 'Move a room piece near the cast to wake the room.'}
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.72 }}>
+                {roomReactionState.activeReaction
+                  ? `${roomReactionState.activeReaction.count} piece${roomReactionState.activeReaction.count === 1 ? '' : 's'} answer right now.`
+                  : 'Nearby voices can stir lamps, seats, plants, and bright little treasures.'}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.62)',
+                borderRadius: 24,
+                padding: '18px 18px',
+                display: 'grid',
+                gap: 8,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: 1.2,
+                  textTransform: 'uppercase',
+                  opacity: 0.72,
+                }}
+              >
+                Room Cast
+              </div>
               {[roomSocialState.player, ...npcActors].filter(Boolean).map((actor) => (
                 <div
                   key={`cast-${actor.id || actor.name}`}
@@ -4467,9 +5194,27 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
                         flexShrink: 0,
                       }}
                     />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {actor.name}
-                    </span>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gap: 2,
+                        minWidth: 0,
+                      }}
+                    >
+                      <span>{actor.name}</span>
+                      {actor.personality && (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            opacity: 0.64,
+                            textTransform: 'capitalize',
+                          }}
+                        >
+                          {`${actor.personality}, ${Math.round((actor.niceness || 0.7) * 100)}% nice`}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <span
                     style={{
