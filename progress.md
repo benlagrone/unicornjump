@@ -218,6 +218,7 @@ TODO:
 2026-03-16:
 - Added a short creature reaction animation to the live game:
   - creatures now enter a timed reaction state when the unicorn explicitly helps or talks to them;
+
   - that reaction drives a small hop arc and a happier expression/state;
   - Lantern Fox now switches to the happy sprite during that reaction window, while non-sprite creatures get a simple smile overlay during the hop.
 - Added cleared-obstacle badges to the HUD:
@@ -1678,3 +1679,22 @@ TODO:
 TODO:
 - The next strongest social pass is giving each NPC family a few multi-line conversation arcs or short call-and-response beats instead of only cycling single bubbles.
 - After that, let room decor react differently to clicked conversations versus passive nearby chatter so the environment feels like it is listening too.
+
+2026-04-14:
+- Fixed the P2 builder-room layout regression in `unicorn-jump/src/BuilderRoom.js`.
+- The room stage now scales against the actual available main-pane width/height instead of the whole viewport, so the bottom dock no longer covers the play area.
+- Split the chrome into a reserved main pane, sidebar rail, and fixed-height dock:
+  - wide screens keep the sidebar in its own right column;
+  - tighter screens move the sidebar into a horizontal rail above the dock.
+- Reduced redundant copy in the builder UI:
+  - shorter intro hint;
+  - shorter dock/remove-zone copy;
+  - condensed sidebar cards (`Quick Moves`, `Furnished`, `Room Voice`, `Room Echo`, `Room Cast`) instead of repeated exposition blocks.
+- Verification:
+  - `npm run build` passes.
+  - Shared web-game client ran successfully against `http://127.0.0.1:3018` after installing the matching Playwright browser bundle and launching Chromium outside the sandbox.
+  - Custom browser layout probe in `unicorn-jump/output/web-game/builder-room-layout-check/summary.json` reports positive separation between the room grid and dock:
+    - `wide` viewport: `dockGapFromGrid: 122`, `sidebarGapFromGrid: 14`;
+    - `laptop` viewport: `dockGapFromGrid: 41`, `sidebarGapFromGrid: 14`.
+  - `unicorn-jump/output/web-game/p2-room-social-post-layout/summary.json` shows the builder-room social smoke test still passes with no captured errors.
+- Added `unicorn-jump/ROOM_MENU_IMAGE_PLAN.md` with the next implementation pass for replacing text-heavy menu chrome with image-first action tiles, room pulse cards, portrait chips, theme hero art, and cleaner dock cards.

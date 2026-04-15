@@ -100,12 +100,26 @@ const isPointerInsideBounds = (element, clientX, clientY) => {
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
-const getRoomStageScale = (roomWidth, roomHeight, layoutMode) => {
+const getRoomStageScale = (
+  roomWidth,
+  roomHeight,
+  layoutMode,
+  widthBudget = null,
+  heightBudget = null
+) => {
   const horizontalPadding = layoutMode.compact ? 20 : 30;
-  const widthBudget = layoutMode.viewportWidth - horizontalPadding * 2;
-  const heightBudget = layoutMode.viewportHeight - (layoutMode.compact ? 250 : 220);
-  const widthScale = widthBudget / roomWidth;
-  const heightScale = heightBudget / roomHeight;
+  const fallbackWidthBudget = layoutMode.viewportWidth - horizontalPadding * 2;
+  const fallbackHeightBudget = layoutMode.viewportHeight - (layoutMode.compact ? 250 : 220);
+  const safeWidthBudget = Math.max(
+    roomWidth * 0.56,
+    (widthBudget ?? fallbackWidthBudget) - (layoutMode.compact ? 8 : 12)
+  );
+  const safeHeightBudget = Math.max(
+    roomHeight * 0.56,
+    (heightBudget ?? fallbackHeightBudget) - (layoutMode.compact ? 8 : 12)
+  );
+  const widthScale = safeWidthBudget / roomWidth;
+  const heightScale = safeHeightBudget / roomHeight;
   const maxScale = layoutMode.compact ? 1.58 : layoutMode.stacked ? 2.02 : 2.36;
 
   return clamp(Math.min(widthScale, heightScale, maxScale), 0.9, maxScale);
@@ -4130,7 +4144,29 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
   const removeZoneRef = useRef(null);
   const [dragState, setDragState] = useState(null);
   const [layoutMode, setLayoutMode] = useState(getRoomLayoutMode);
-  const roomStageScale = getRoomStageScale(roomWidth, roomHeight, layoutMode);
+  const screenInset = layoutMode.compact ? 10 : 14;
+  const topOverlayInset = layoutMode.compact ? 12 : 18;
+  const contentGap = layoutMode.compact ? 10 : 14;
+  const stageTopInset = layoutMode.compact ? 96 : 110;
+  const sidebarWidth = layoutMode.compact ? 228 : 280;
+  const sidebarRailHeight = layoutMode.stacked ? (layoutMode.compact ? 110 : 120) : 0;
+  const dockBottomInset = screenInset;
+  const trayDockHeight = layoutMode.compact ? 134 : 126;
+  const mainPaneRightInset = layoutMode.stacked
+    ? topOverlayInset
+    : topOverlayInset + sidebarWidth + contentGap;
+  const stageBottomInset =
+    dockBottomInset +
+    trayDockHeight +
+    contentGap +
+    (layoutMode.stacked ? sidebarRailHeight + contentGap : 0);
+  const roomStageScale = getRoomStageScale(
+    roomWidth,
+    roomHeight,
+    layoutMode,
+    layoutMode.viewportWidth - topOverlayInset - mainPaneRightInset,
+    layoutMode.viewportHeight - stageTopInset - stageBottomInset
+  );
   const roomDisplayWidth = Math.round(roomWidth * roomStageScale);
   const roomDisplayHeight = Math.round(roomHeight * roomStageScale);
   const runtimeIdentity = `${houseId}:${roomWidth}:${roomHeight}:${roomTheme?.id || 'room'}`;
@@ -4172,6 +4208,23 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
   const reactiveItemMap = new Map(
     roomReactionState.reactiveItems.map((item) => [item.id, item])
   );
+  const castActors = [roomSocialState.player, ...npcActors].filter(Boolean);
+  const roomVoiceSpeaker = roomSocialState.social?.activeLine?.speaker || 'Room';
+  const roomVoiceText =
+    roomSocialState.social?.activeLine?.text || 'Waiting for the next hello.';
+  const roomVoiceMeta = roomSocialState.social?.interaction
+    ? `${roomSocialState.social.interaction.personality} friend / ${Math.round(
+        roomSocialState.social.interaction.niceness * 100
+      )}% nice / ${roomSocialState.social.interaction.source === 'click' ? 'tap hello' : 'nearby hello'}`
+    : null;
+  const roomEchoText = roomReactionState.activeReaction
+    ? `${roomReactionState.activeReaction.itemName} answers with ${roomReactionState.activeReaction.beatLabel || roomReactionState.activeReaction.reactionLabel}.`
+    : roomItems.length === 0
+      ? 'Add decor near the cast to wake the room.'
+      : 'Move decor near the cast to wake the room.';
+  const roomEchoStatus = roomReactionState.activeReaction
+    ? `${roomReactionState.activeReaction.count} piece${roomReactionState.activeReaction.count === 1 ? '' : 's'} answering now`
+    : 'Nearby voices stir lamps, seats, plants, and treasures.';
   const introPlayer = createInitialRoomRuntime(roomWidth, roomHeight, roomTheme, houseId).player;
   const playerHasStartedMoving = roomRuntime.player
     ? Math.hypot(
@@ -4531,11 +4584,6 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
       return next;
     });
   };
-  const screenInset = layoutMode.compact ? 10 : 14;
-  const topOverlayInset = layoutMode.compact ? 12 : 18;
-  const stageTopInset = layoutMode.compact ? 96 : 110;
-  const trayDockHeight = layoutMode.compact ? 148 : 138;
-  const stageBottomInset = trayDockHeight + (layoutMode.compact ? 16 : 20);
   const overlayCardStyle = {
     background: 'rgba(255,255,255,0.74)',
     borderRadius: 22,
@@ -4549,6 +4597,53 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     opacity: 0.7,
+  };
+  const sidebarContainerStyle = layoutMode.stacked
+    ? {
+        position: 'absolute',
+        left: topOverlayInset,
+        right: topOverlayInset,
+        bottom: dockBottomInset + trayDockHeight + contentGap,
+        height: sidebarRailHeight,
+        display: 'flex',
+        alignItems: 'stretch',
+        gap: 10,
+        zIndex: 24,
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        paddingBottom: 2,
+        scrollbarWidth: 'thin',
+      }
+    : {
+        position: 'absolute',
+        right: topOverlayInset,
+        top: stageTopInset,
+        bottom: dockBottomInset,
+        width: sidebarWidth,
+        display: 'grid',
+        alignContent: 'start',
+        gap: 10,
+        zIndex: 24,
+        overflowY: 'auto',
+        paddingRight: 2,
+        paddingBottom: 2,
+        scrollbarWidth: 'thin',
+      };
+  const sidebarCardStyle = {
+    ...overlayCardStyle,
+    padding: layoutMode.compact ? '10px 12px' : '12px 14px',
+    display: 'grid',
+    gap: layoutMode.compact ? 6 : 8,
+    minWidth: layoutMode.stacked ? (layoutMode.compact ? 188 : 216) : undefined,
+    flexShrink: 0,
+  };
+  const sidebarStatCardStyle = {
+    ...overlayCardStyle,
+    padding: layoutMode.compact ? '12px 14px' : '14px 16px',
+    display: 'grid',
+    gap: 4,
+    minWidth: layoutMode.stacked ? 164 : undefined,
+    flexShrink: 0,
   };
   return (
     <div
@@ -4660,7 +4755,7 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
         style={{
           position: 'absolute',
           left: topOverlayInset,
-          right: topOverlayInset,
+          right: mainPaneRightInset,
           top: stageTopInset,
           bottom: stageBottomInset,
         }}
@@ -4931,437 +5026,347 @@ const BuilderRoom = ({ house, onBack, onAddFurniture, onMoveFurniture, onRemoveF
 
                   {showIntroHint && (
                     <div
-                    style={{
-                      position: 'absolute',
-                      left: 18,
-                      top: 18,
-                      maxWidth: 180,
-                      padding: '10px 12px',
-                      borderRadius: 18,
-                      background: 'rgba(255,255,255,0.68)',
-                      boxShadow: '0 10px 18px rgba(15, 23, 42, 0.1)',
-                      textAlign: 'left',
-                      whiteSpace: 'pre-line',
-                      fontSize: 12.5,
-                      fontWeight: 700,
-                      lineHeight: 1.18,
-                      color: '#48627f',
-                      pointerEvents: 'none',
-                    }}
-                  >
-                      {'Guide the unicorn.\nTap a room friend to go say hi.\nDrag decor in when ready.'}
-                  </div>
-                )}
+                      style={{
+                        position: 'absolute',
+                        left: 18,
+                        top: 18,
+                        maxWidth: 168,
+                        padding: '10px 12px',
+                        borderRadius: 18,
+                        background: 'rgba(255,255,255,0.68)',
+                        boxShadow: '0 10px 18px rgba(15, 23, 42, 0.1)',
+                        textAlign: 'left',
+                        whiteSpace: 'pre-line',
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        lineHeight: 1.18,
+                        color: '#48627f',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {'Tap floor to move.\nTap a friend.\nDrag decor in.'}
+                    </div>
+                  )}
               </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+      </div>
 
+      <div style={sidebarContainerStyle}>
+        <div style={sidebarCardStyle}>
           <div
             style={{
-              position: 'absolute',
-              right: 0,
-              top: layoutMode.compact ? 0 : 8,
-              width: layoutMode.compact ? 228 : 280,
-              display: 'grid',
-              gap: 10,
-              zIndex: 24,
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              opacity: 0.72,
             }}
           >
-            <div
-              style={{
-                ...overlayCardStyle,
-                padding: '12px 14px',
-                display: 'grid',
-                gap: 10,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                  marginBottom: 8,
-                }}
-              >
-                Room Rules
-              </div>
-              <div style={{ whiteSpace: 'pre-line', lineHeight: 1.34, fontSize: 15 }}>
-                {'Click the room to guide the unicorn.\nTap a room friend to walk over and chat.\nNearby room friends usually say hi.'}
-              </div>
+            Quick Moves
+          </div>
+          {['Tap floor to move', 'Tap friend to chat', 'Drag decor from dock'].map((tip) => (
+            <div key={tip} style={{ fontSize: 13.5, lineHeight: 1.24 }}>
+              {tip}
             </div>
+          ))}
+        </div>
 
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                  marginBottom: 8,
-                }}
-              >
-                Furnished Tonight
-              </div>
-              <div style={{ fontSize: 34, fontWeight: 800 }}>{roomItems.length}</div>
-              <div style={{ marginTop: 4, fontSize: 15 }}>
-                {roomItems.length === 1 ? 'room piece' : 'room pieces'}
-              </div>
-            </div>
+        <div style={sidebarStatCardStyle}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              opacity: 0.72,
+            }}
+          >
+            Furnished
+          </div>
+          <div style={{ fontSize: layoutMode.compact ? 28 : 34, fontWeight: 800, lineHeight: 1 }}>
+            {roomItems.length}
+          </div>
+          <div style={{ fontSize: 13.5, opacity: 0.8 }}>
+            {roomItems.length === 1 ? 'room piece' : 'room pieces'}
+          </div>
+        </div>
 
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                  marginBottom: 8,
-                }}
-              >
-                Room Theme
-              </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gap: 6,
-                  paddingTop: 2,
-                  borderTop: '1px solid rgba(23, 52, 92, 0.08)',
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.72 }}>
-                  {roomSocialState.social?.activeLine?.speaker || 'Room'}
-                </div>
-                <div style={{ fontSize: 14, lineHeight: 1.28 }}>
-                  {roomSocialState.social?.activeLine?.text || 'The room is settled and waiting for the next hello.'}
-                </div>
-              </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gap: 4,
-                  paddingTop: 2,
-                  borderTop: '1px solid rgba(23, 52, 92, 0.08)',
-                }}
-              >
-                <div style={{ ...compactLabelStyle, fontSize: 10 }}>Room Echo</div>
-                <div style={{ fontSize: 13.5, lineHeight: 1.28 }}>
-                  {roomReactionState.activeReaction
-                    ? `${roomReactionState.activeReaction.itemName} answers with ${roomReactionState.activeReaction.beatLabel || roomReactionState.activeReaction.reactionLabel}.`
-                    : roomItems.length === 0
-                      ? 'Add a room piece near the cast to wake the room.'
-                      : 'Move a room piece near the cast to wake the room.'}
-                </div>
-              </div>
-            </div>
+        <div style={sidebarCardStyle}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              opacity: 0.72,
+            }}
+          >
+            Room Voice
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.72 }}>{roomVoiceSpeaker}</div>
+          <div style={{ fontSize: 14, lineHeight: 1.28 }}>{roomVoiceText}</div>
+          {roomVoiceMeta && (
+            <div style={{ fontSize: 11.5, opacity: 0.68, lineHeight: 1.28 }}>{roomVoiceMeta}</div>
+          )}
+        </div>
 
-            <div
-              style={{
-                ...overlayCardStyle,
-                padding: '12px 14px',
-                display: 'grid',
-                gap: 8,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                }}
-              >
-                Room Mood
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 800, opacity: 0.72 }}>
-                {roomSocialState.social?.activeLine?.speaker || 'Room'}
-              </div>
-              <div style={{ fontSize: 15, lineHeight: 1.34 }}>
-                {roomSocialState.social?.activeLine?.text || 'The room is settled and waiting for the next hello.'}
-              </div>
-              {roomSocialState.social?.interaction && (
-                <div style={{ fontSize: 12, opacity: 0.72, lineHeight: 1.3 }}>
-                  {`${roomSocialState.social.interaction.personality} friend, ${Math.round(
-                    roomSocialState.social.interaction.niceness * 100
-                  )}% nice, ${roomSocialState.social.interaction.source === 'click' ? 'clicked chat' : 'nearby hello'}.`}
-                </div>
-              )}
-            </div>
+        <div style={sidebarCardStyle}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              opacity: 0.72,
+            }}
+          >
+            Room Echo
+          </div>
+          <div style={{ fontSize: 13.5, lineHeight: 1.28 }}>{roomEchoText}</div>
+          <div style={{ fontSize: 11.5, opacity: 0.68, lineHeight: 1.28 }}>{roomEchoStatus}</div>
+        </div>
 
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
-                display: 'grid',
-                gap: 8,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                }}
-              >
-                Room Echo
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 800, opacity: 0.72 }}>
-                {roomReactionState.activeReaction?.speaker || 'Quiet decor'}
-              </div>
-              <div style={{ fontSize: 15, lineHeight: 1.34 }}>
-                {roomReactionState.activeReaction
-                  ? `${roomReactionState.activeReaction.itemName} answers with ${roomReactionState.activeReaction.beatLabel || roomReactionState.activeReaction.reactionLabel}.`
-                  : roomItems.length === 0
-                    ? 'Add a room piece near the cast to wake the room.'
-                    : 'Move a room piece near the cast to wake the room.'}
-              </div>
-              <div style={{ fontSize: 12, opacity: 0.72 }}>
-                {roomReactionState.activeReaction
-                  ? `${roomReactionState.activeReaction.count} piece${roomReactionState.activeReaction.count === 1 ? '' : 's'} answer right now.`
-                  : 'Nearby voices can stir lamps, seats, plants, and bright little treasures.'}
-              </div>
-            </div>
-
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.62)',
-                borderRadius: 24,
-                padding: '18px 18px',
-                display: 'grid',
-                gap: 8,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: 1.2,
-                  textTransform: 'uppercase',
-                  opacity: 0.72,
-                }}
-              >
-                Room Cast
-              </div>
-              {[roomSocialState.player, ...npcActors].filter(Boolean).map((actor) => (
-                <div
-                  key={`cast-${actor.id || actor.name}`}
+        <div style={sidebarCardStyle}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              opacity: 0.72,
+            }}
+          >
+            Room Cast
+          </div>
+          {layoutMode.stacked ? (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {castActors.map((actor) => (
+                <span
+                  key={`cast-chip-${actor.id || actor.name}`}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 8,
-                    fontSize: 13.5,
-                    fontWeight: actor.id ? 700 : 800,
+                    padding: '4px 8px',
+                    borderRadius: 999,
+                    background: 'rgba(255,255,255,0.78)',
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    lineHeight: 1.1,
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      minWidth: 0,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 9,
-                        height: 9,
-                        borderRadius: '50%',
-                        background: actor.accentColor || actor.bubbleTone || roomTheme?.accent || '#f4b457',
-                        boxShadow: '0 0 0 3px rgba(255,255,255,0.56)',
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div
-                      style={{
-                        display: 'grid',
-                        gap: 2,
-                        minWidth: 0,
-                      }}
-                    >
-                      <span>{actor.name}</span>
-                      {actor.personality && (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            opacity: 0.64,
-                            textTransform: 'capitalize',
-                          }}
-                        >
-                          {`${actor.personality}, ${Math.round((actor.niceness || 0.7) * 100)}% nice`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      padding: '2px 7px',
-                      borderRadius: 999,
-                      background: 'rgba(255,255,255,0.76)',
-                      fontSize: 10.5,
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: 0.45,
-                      opacity: 0.78,
-                      flexShrink: 0,
-                    }}
-                  >
-                    {actor.mood || 'calm'}
-                  </span>
-                </div>
+                  {actor.name}
+                </span>
               ))}
             </div>
-          </div>
-
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              display: 'flex',
-              alignItems: 'stretch',
-              gap: 12,
-              zIndex: 30,
-            }}
-          >
-            <div
-              style={{
-                ...overlayCardStyle,
-                flex: 1,
-                minWidth: 0,
-                padding: layoutMode.compact ? '10px 10px 10px 12px' : '12px 12px 12px 14px',
-                display: 'grid',
-                gap: 10,
-              }}
-            >
+          ) : (
+            castActors.map((actor) => (
               <div
+                key={`cast-${actor.id || actor.name}`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: 12,
-                  flexWrap: 'wrap',
+                  gap: 8,
+                  fontSize: 13.5,
+                  fontWeight: 700,
                 }}
               >
-                <div>
-                  <div style={compactLabelStyle}>Inventory Dock</div>
-                  <div style={{ fontSize: 13.5, lineHeight: 1.28, opacity: 0.8 }}>
-                    Drag furniture straight into the room. No page scrolling.
-                  </div>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, opacity: 0.78 }}>
-                  {roomTheme?.name || house.name}
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 10,
-                  overflowX: 'auto',
-                  paddingBottom: 2,
-                  scrollbarWidth: 'thin',
-                }}
-              >
-                {trayItems.map((furniture) => (
-                  <button
-                    key={furniture.id}
-                    id={`builder-tray-${furniture.id}`}
-                    type="button"
-                    onPointerDown={(event) => beginTrayDrag(furniture, event)}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    minWidth: 0,
+                  }}
+                >
+                  <span
                     style={{
-                      ...dragCardStyle,
-                      minWidth: layoutMode.compact ? 214 : 238,
-                      padding: '12px 12px',
+                      width: 9,
+                      height: 9,
+                      borderRadius: '50%',
+                      background: actor.accentColor || actor.bubbleTone || roomTheme?.accent || '#f4b457',
+                      boxShadow: '0 0 0 3px rgba(255,255,255,0.56)',
                       flexShrink: 0,
                     }}
+                  />
+                  <span
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
                   >
-                    <div
-                      style={{
-                        position: 'relative',
-                        width: 52,
-                        height: 52,
-                        borderRadius: 16,
-                        background: 'rgba(248, 250, 252, 0.96)',
-                        boxShadow: 'inset 0 0 0 1px rgba(23, 52, 92, 0.08)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <FurnitureArt
-                        item={{
-                          ...furniture,
-                          typeId: furniture.id,
-                        }}
-                      />
-                    </div>
-                    <div style={{ textAlign: 'left', minWidth: 0 }}>
-                      <div style={{ fontSize: 15, fontWeight: 800 }}>{furniture.name}</div>
-                      <div style={{ fontSize: 12, opacity: 0.72 }}>drag into room</div>
-                    </div>
-                  </button>
-                ))}
+                    {actor.name}
+                  </span>
+                </div>
+                <span
+                  style={{
+                    padding: '2px 7px',
+                    borderRadius: 999,
+                    background: 'rgba(255,255,255,0.76)',
+                    fontSize: 10.5,
+                    fontWeight: 800,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.45,
+                    opacity: 0.78,
+                    flexShrink: 0,
+                  }}
+                >
+                  {actor.mood || 'calm'}
+                </span>
               </div>
-            </div>
+            ))
+          )}
+        </div>
+      </div>
 
-            <div
-              ref={removeZoneRef}
-              id="builder-room-remove-zone"
-              style={{
-                ...overlayCardStyle,
-                width: layoutMode.compact ? 164 : 188,
-                flexShrink: 0,
-                padding: '12px 14px',
-                border:
-                  dragState?.source === 'room'
-                    ? `2px dashed ${dragState.insideRemoveZone ? '#dc2626' : 'rgba(220, 38, 38, 0.34)'}`
-                    : '2px dashed rgba(23, 52, 92, 0.12)',
-                background: dragState?.source === 'room' && dragState.insideRemoveZone
-                  ? 'linear-gradient(180deg, rgba(255, 222, 222, 0.98), rgba(255, 196, 196, 0.92))'
-                  : 'rgba(255,255,255,0.74)',
-                boxShadow: dragState?.source === 'room' && dragState.insideRemoveZone
-                  ? '0 16px 28px rgba(220, 38, 38, 0.14)'
-                  : overlayCardStyle.boxShadow,
-                transition: 'background 120ms ease, border-color 120ms ease, box-shadow 120ms ease',
-                display: 'grid',
-                gap: 8,
-              }}
-            >
-              <div style={compactLabelStyle}>Remove Piece</div>
-              <div style={{ fontSize: 13.5, lineHeight: 1.3, whiteSpace: 'pre-line' }}>
-                {dragState?.source === 'room'
-                  ? dragState.insideRemoveZone
-                    ? 'Release now.\nThis room piece goes away.'
-                    : 'Drag a placed piece here.\nRelease to send it away.'
-                  : 'Swap decor fast.\nDrag a placed piece here.'}
+      <div
+        style={{
+          position: 'absolute',
+          left: topOverlayInset,
+          right: mainPaneRightInset,
+          bottom: dockBottomInset,
+          height: trayDockHeight,
+          display: 'flex',
+          alignItems: 'stretch',
+          gap: 12,
+          zIndex: 30,
+        }}
+      >
+        <div
+          style={{
+            ...overlayCardStyle,
+            flex: 1,
+            minWidth: 0,
+            height: '100%',
+            padding: layoutMode.compact ? '10px 10px 10px 12px' : '11px 12px 11px 14px',
+            display: 'grid',
+            gridTemplateRows: 'auto minmax(0, 1fr)',
+            gap: 8,
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div>
+              <div style={compactLabelStyle}>Inventory Dock</div>
+              <div style={{ fontSize: 12.5, lineHeight: 1.2, opacity: 0.8 }}>
+                Drag decor into the room.
               </div>
             </div>
+            {!layoutMode.compact && (
+              <div style={{ fontSize: 12.5, fontWeight: 700, opacity: 0.72 }}>
+                {roomTheme?.name || house.name}
+              </div>
+            )}
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              gap: 10,
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              paddingBottom: 2,
+              scrollbarWidth: 'thin',
+            }}
+          >
+            {trayItems.map((furniture) => (
+              <button
+                key={furniture.id}
+                id={`builder-tray-${furniture.id}`}
+                type="button"
+                onPointerDown={(event) => beginTrayDrag(furniture, event)}
+                style={{
+                  ...dragCardStyle,
+                  minWidth: layoutMode.compact ? 172 : 188,
+                  padding: '10px 12px',
+                  flexShrink: 0,
+                }}
+              >
+                <div
+                  style={{
+                    position: 'relative',
+                    width: 44,
+                    height: 44,
+                    borderRadius: 14,
+                    background: 'rgba(248, 250, 252, 0.96)',
+                    boxShadow: 'inset 0 0 0 1px rgba(23, 52, 92, 0.08)',
+                    flexShrink: 0,
+                  }}
+                >
+                  <FurnitureArt
+                    item={{
+                      ...furniture,
+                      typeId: furniture.id,
+                    }}
+                  />
+                </div>
+                <div style={{ textAlign: 'left', minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 800,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {furniture.name}
+                  </div>
+                  <div style={{ fontSize: 11.5, opacity: 0.68 }}>drag in</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div
+          ref={removeZoneRef}
+          id="builder-room-remove-zone"
+          style={{
+            ...overlayCardStyle,
+            width: layoutMode.compact ? 150 : 168,
+            flexShrink: 0,
+            height: '100%',
+            padding: '12px 14px',
+            border:
+              dragState?.source === 'room'
+                ? `2px dashed ${dragState.insideRemoveZone ? '#dc2626' : 'rgba(220, 38, 38, 0.34)'}`
+                : '2px dashed rgba(23, 52, 92, 0.12)',
+            background: dragState?.source === 'room' && dragState.insideRemoveZone
+              ? 'linear-gradient(180deg, rgba(255, 222, 222, 0.98), rgba(255, 196, 196, 0.92))'
+              : 'rgba(255,255,255,0.74)',
+            boxShadow: dragState?.source === 'room' && dragState.insideRemoveZone
+              ? '0 16px 28px rgba(220, 38, 38, 0.14)'
+              : overlayCardStyle.boxShadow,
+            transition: 'background 120ms ease, border-color 120ms ease, box-shadow 120ms ease',
+            display: 'grid',
+            alignContent: 'space-between',
+            gap: 8,
+          }}
+        >
+          <div style={compactLabelStyle}>Remove Piece</div>
+          <div style={{ fontSize: 12.5, lineHeight: 1.26, whiteSpace: 'pre-line' }}>
+            {dragState?.source === 'room'
+              ? dragState.insideRemoveZone
+                ? 'Release to remove.'
+                : 'Drop a placed piece here.'
+              : 'Drag a placed piece here.'}
           </div>
         </div>
       </div>
+    </div>
   );
 };
 
