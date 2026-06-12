@@ -877,6 +877,37 @@ export const snapRoomPosition = (room, furniture, rawPosition) => {
   };
 };
 
+const STARTER_ROOM_POSITIONS = [
+  { x: 0.1, y: 0.66 },
+  { x: 0.34, y: 0.72 },
+  { x: 0.58, y: 0.64 },
+  { x: 0.78, y: 0.72 },
+];
+
+const createStarterRoomItems = (room, roomTheme, roomSeed, firstItemNumber) =>
+  getFurnitureCatalogForRoom(roomTheme?.id, roomSeed)
+    .slice(0, STARTER_ROOM_POSITIONS.length)
+    .map((furniture, index) => {
+      const position = STARTER_ROOM_POSITIONS[index] || STARTER_ROOM_POSITIONS[0];
+      const snappedPosition = snapRoomPosition(room, furniture, {
+        x: Math.round(room.width * position.x),
+        y: Math.round(room.height * position.y),
+      });
+
+      return {
+        id: `room-item-${firstItemNumber + index}`,
+        typeId: furniture.id,
+        name: furniture.name,
+        type: furniture.type,
+        color: furniture.color,
+        accent: furniture.accent,
+        width: furniture.width,
+        height: furniture.height,
+        x: snappedPosition.x,
+        y: snappedPosition.y,
+      };
+    });
+
 const mapHouse = (builderState, houseId, updateHouse) =>
   builderState.houses.map((house) => (house.id === houseId ? updateHouse(house) : house));
 
@@ -900,6 +931,19 @@ export const placeHouseOnTile = (builderState, tileId, houseTypeId = HOUSE_TYPES
 
   const houseType = getHouseTypeDefinition(houseTypeId);
   const houseId = `house-${builderState.nextHouseNumber}`;
+  const roomTheme = {
+    ...houseType.roomTheme,
+  };
+  const room = {
+    width: BUILDER_ROOM_GRID_SIZE * houseType.roomColumns,
+    height: BUILDER_ROOM_GRID_SIZE * houseType.roomRows,
+  };
+  const starterItems = createStarterRoomItems(
+    room,
+    roomTheme,
+    houseId,
+    builderState.nextRoomItemNumber
+  );
   const house = {
     id: houseId,
     tileId,
@@ -912,13 +956,10 @@ export const placeHouseOnTile = (builderState, tileId, houseTypeId = HOUSE_TYPES
       trimColor: houseType.trimColor,
       glowColor: houseType.glowColor,
     },
-    roomTheme: {
-      ...houseType.roomTheme,
-    },
+    roomTheme,
     room: {
-      width: BUILDER_ROOM_GRID_SIZE * houseType.roomColumns,
-      height: BUILDER_ROOM_GRID_SIZE * houseType.roomRows,
-      items: [],
+      ...room,
+      items: starterItems,
     },
   };
 
@@ -930,6 +971,7 @@ export const placeHouseOnTile = (builderState, tileId, houseTypeId = HOUSE_TYPES
       ),
       houses: [...builderState.houses, house],
       nextHouseNumber: builderState.nextHouseNumber + 1,
+      nextRoomItemNumber: builderState.nextRoomItemNumber + starterItems.length,
     },
     house,
     placed: true,
