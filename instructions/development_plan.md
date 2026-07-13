@@ -1,5 +1,10 @@
 # Unicorn Jump Game Development Plan
 
+## Extended Feature Plans
+- Three.js world layers and Unicorn Runner: `unicorn-jump/THREEJS_RUNNER_DEVELOPMENT_PLAN.md`
+- Virtual pet unicorn: `unicorn-jump/UNICORN_PET_DEVELOPMENT_PLAN.md`
+- Collectible coins: `unicorn-jump/COIN_SYSTEM_DEVELOPMENT_PLAN.md`
+
 ## 1. Project Setup (Completed)
 - [x] Create project directory 'unicorn-jump'
 - [x] Create gameplay.txt with game specifications
@@ -25,6 +30,12 @@
 ## 3. Game Mechanics Implementation
 - [ ] Implement vertical scrolling mechanic
 - [ ] Add score system
+- [ ] Add collectible coins
+  - See `unicorn-jump/COIN_SYSTEM_DEVELOPMENT_PLAN.md` for the extended implementation plan
+  - Spawn coins along safe jump paths and optional challenge arcs
+  - Award coins when the unicorn touches them
+  - Add coin magnet / sparkle pickup feedback
+  - Persist collected coin totals for unlocks and future shop-style rewards
 - [ ] Implement difficulty progression
 - [ ] Add game over conditions
 - [ ] Implement power-up effects
@@ -32,6 +43,7 @@
 ## 4. UI/UX Development
 - [ ] Create main menu screen
 - [ ] Implement in-game HUD (score, height, power-up status)
+- [ ] Add coin counter to HUD and end-of-run summary
 - [ ] Add pause functionality
 - [ ] Create game over screen
 - [ ] Implement settings menu (sound, controls)
@@ -40,9 +52,10 @@
 - [ ] Source or create character sprites and animations
 - [ ] Design and implement platform sprites
 - [ ] Create obstacle and power-up sprites
+- [ ] Create coin sprites and collection effects
 - [ ] Design parallax scrolling backgrounds
 - [ ] Add background music for different stages
-- [ ] Implement sound effects for actions (jumping, landing, collecting power-ups)
+- [ ] Implement sound effects for actions (jumping, landing, collecting coins, collecting power-ups)
 
 ## 6. Performance Optimization
 - [ ] Optimize game loop for smooth performance
@@ -65,6 +78,7 @@
 - [ ] Implement leaderboards
 - [ ] Add achievements system
 - [ ] Create character customization options
+- [ ] Add coin-based unlocks for cosmetics, room items, pet treats, or runner rewards
 
 ## 10. Deployment
 - [ ] Prepare for web deployment

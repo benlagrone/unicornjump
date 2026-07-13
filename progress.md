@@ -1698,3 +1698,56 @@ TODO:
     - `laptop` viewport: `dockGapFromGrid: 41`, `sidebarGapFromGrid: 14`.
   - `unicorn-jump/output/web-game/p2-room-social-post-layout/summary.json` shows the builder-room social smoke test still passes with no captured errors.
 - Added `unicorn-jump/ROOM_MENU_IMAGE_PLAN.md` with the next implementation pass for replacing text-heavy menu chrome with image-first action tiles, room pulse cards, portrait chips, theme hero art, and cleaner dock cards.
+
+2026-06-11:
+- Updated `unicorn-jump/WORLD_ROADMAP.md` with future concept sections for Three.js world layers and an optional Unicorn Runner mode.
+- Scoped Three.js as an additive presentation layer first:
+  - Lantern Garden hub diorama;
+  - clickable 3D regional gates;
+  - 3D builder-world preview;
+  - 3D-feeling room shells;
+  - biome landmark reactions such as gates opening, bridges growing, wind currents appearing, and lanterns awakening.
+- Captured Unicorn Runner as a separate optional mode that can reuse biome identity, companions, collectibles, and gentle recovery systems without replacing the current exploration runtime.
+
+2026-06-12:
+- Added `unicorn-jump/THREEJS_RUNNER_DEVELOPMENT_PLAN.md` as the extended implementation plan for the Three.js world-layer and optional Unicorn Runner concepts.
+- The plan breaks the work into:
+  - Three.js technical spike;
+  - Lantern Garden hub diorama;
+  - hub world-state reactions;
+  - builder-world diorama;
+  - room-shell depth pass;
+  - runner design lock;
+  - 2D Lantern Bamboo Valley runner prototype;
+  - companion/biome runner hooks;
+  - Three.js 2.5D runner experiment;
+  - progression and reward integration.
+- Updated `unicorn-jump/WORLD_ROADMAP.md` to point readers to the extended plan.
+- Added `unicorn-jump/UNICORN_PET_DEVELOPMENT_PLAN.md` for a virtual pet unicorn feature.
+- The pet plan scopes the feature as a cozy optional care mode with:
+  - feed, brush, play, rest, dress-up, and decorate-for-pet actions;
+  - gentle care stats for hunger, energy, sparkle, cleanliness, mood, and bond;
+  - builder-room integration through pet furniture;
+  - biome treat and memory unlocks;
+  - companion and NPC reactions;
+  - daily wishes without streak pressure or neglect punishment.
+- Updated `unicorn-jump/WORLD_ROADMAP.md` with a `Future Concept: Virtual Pet Unicorn` section that links to the extended plan.
+- Updated `instructions/development_plan.md` to add collectible coins to the development feature list:
+  - coin spawning and pickup;
+  - coin HUD and run-summary counter;
+  - coin sprites, collection effects, and sounds;
+  - persisted coin totals for future cosmetic, room, pet, or runner unlocks.
+- Added `unicorn-jump/COIN_SYSTEM_DEVELOPMENT_PLAN.md` as the extended implementation plan for collectible coins.
+- Updated `instructions/development_plan.md` with an `Extended Feature Plans` index covering:
+  - Three.js world layers and Unicorn Runner;
+  - Virtual Pet Unicorn;
+  - Collectible Coins.
+
+2026-07-12:
+- Updated `unicorn-jump/WORLD_ROADMAP.md` with a `Future Concept: Collectible Coins` section.
+- The roadmap entry links to `COIN_SYSTEM_DEVELOPMENT_PLAN.md` and scopes coins as an optional reward layer for:
+  - exploration route rewards;
+  - future Unicorn Runner replayability;
+  - builder and pet unlocks;
+  - HUD and completion-summary payout feedback;
+  - safe persisted coin totals without blocking quest or biome progression.

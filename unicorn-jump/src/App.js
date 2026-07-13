@@ -1,8 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Game from './Game';
 import Settings from './Settings';
 import BuilderRoom from './BuilderRoom';
 import BuilderWorld from './BuilderWorld';
+import {
+  getProgressDeviceId,
+  getProgressProfileId,
+  isProgressSyncEnabled,
+  loadRemoteProgress,
+  saveRemoteProgress,
+} from './progressSync';
 import { BIOMES, getBiomeConfig } from './biomeManager';
 import { buildUnlockedCompanions } from './companionSystem';
 import {
@@ -51,6 +58,50 @@ import {
 
 const HIGH_SCORE_STORAGE_KEY = 'highScore';
 const JOURNEY_STORAGE_KEY = 'gardenMessengerJourney';
+const SUMMER_STATE_STORAGE_KEY = 'sapphireSummerState';
+const UNICORN_RUN_STAR_COST = 3;
+
+const SUMMER_QUESTS = [
+  {
+    id: 'sing-chinese-song',
+    title: 'Sing a Chinese song',
+    reward: 2,
+    theme: '#ef7ca8',
+  },
+  {
+    id: 'draw-picture',
+    title: 'Draw one picture',
+    reward: 2,
+    theme: '#7c8cf2',
+  },
+  {
+    id: 'dance-break',
+    title: 'Dance for one song',
+    reward: 1,
+    theme: '#f59e0b',
+  },
+  {
+    id: 'help-clean-up',
+    title: 'Help clean up',
+    reward: 2,
+    theme: '#10b981',
+  },
+  {
+    id: 'learn-word',
+    title: 'Learn one word',
+    reward: 1,
+    theme: '#14b8a6',
+  },
+];
+
+const getTodayKey = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+};
 
 const getBackgroundImageForBiome = (biomeIndex) => {
   const imageNumber = (biomeIndex % 6) + 1;
@@ -95,6 +146,98 @@ const createInitialJourney = () => {
   }
 
   return fallback;
+};
+
+const createInitialSummerState = () => {
+  const todayKey = getTodayKey();
+  const fallback = {
+    dateKey: todayKey,
+    stars: 0,
+    completedQuestIds: [],
+    unicornRuns: 0,
+  };
+
+  try {
+    const stored = window.localStorage.getItem(SUMMER_STATE_STORAGE_KEY);
+    if (!stored) {
+      return fallback;
+    }
+
+    const parsed = JSON.parse(stored);
+    const stars = Number.isFinite(parsed?.stars) ? Math.max(0, parsed.stars) : 0;
+    const unicornRuns = Number.isFinite(parsed?.unicornRuns) ? Math.max(0, parsed.unicornRuns) : 0;
+
+    if (parsed?.dateKey !== todayKey) {
+      return {
+        ...fallback,
+        stars,
+      };
+    }
+
+    return {
+      dateKey: todayKey,
+      stars,
+      completedQuestIds: Array.isArray(parsed?.completedQuestIds)
+        ? parsed.completedQuestIds.filter((questId) =>
+            SUMMER_QUESTS.some((quest) => quest.id === questId)
+          )
+        : [],
+      unicornRuns,
+    };
+  } catch (error) {
+    return fallback;
+  }
+};
+
+const mergeJourneyProgress = (localJourney, remoteJourney) => {
+  if (!remoteJourney) {
+    return localJourney;
+  }
+
+  const remoteCompletedBiomeIds = Array.isArray(remoteJourney.completedBiomeIds)
+    ? remoteJourney.completedBiomeIds.filter((entry) => BIOMES.some((biome) => biome.id === entry))
+    : [];
+  const completedBiomeIds = Array.from(
+    new Set([...localJourney.completedBiomeIds, ...remoteCompletedBiomeIds])
+  );
+  const remoteCurrentBiomeIndex =
+    typeof remoteJourney.currentBiomeIndex === 'number'
+      ? clamp(remoteJourney.currentBiomeIndex, 0, BIOMES.length - 1)
+      : localJourney.currentBiomeIndex;
+
+  return {
+    currentBiomeIndex: Math.max(localJourney.currentBiomeIndex, remoteCurrentBiomeIndex),
+    completedBiomeIds,
+  };
+};
+
+const mergeSummerProgress = (localSummerState, remoteSummerState) => {
+  if (!remoteSummerState) {
+    return localSummerState;
+  }
+
+  const todayKey = getTodayKey();
+  const remoteStars = Number.isFinite(remoteSummerState.stars)
+    ? Math.max(0, remoteSummerState.stars)
+    : 0;
+  const remoteUnicornRuns = Number.isFinite(remoteSummerState.unicornRuns)
+    ? Math.max(0, remoteSummerState.unicornRuns)
+    : 0;
+  const remoteCompletedQuestIds =
+    remoteSummerState.dateKey === todayKey && Array.isArray(remoteSummerState.completedQuestIds)
+      ? remoteSummerState.completedQuestIds.filter((questId) =>
+          SUMMER_QUESTS.some((quest) => quest.id === questId)
+        )
+      : [];
+
+  return {
+    dateKey: todayKey,
+    stars: Math.max(localSummerState.stars, remoteStars),
+    completedQuestIds: Array.from(
+      new Set([...localSummerState.completedQuestIds, ...remoteCompletedQuestIds])
+    ),
+    unicornRuns: Math.max(localSummerState.unicornRuns, remoteUnicornRuns),
+  };
 };
 
 const basePanelStyle = {
@@ -330,6 +473,11 @@ const App = () => {
   const [screen, setScreen] = useState('menu');
   const [highScore, setHighScore] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [progressProfileId] = useState(getProgressProfileId);
+  const [progressDeviceId] = useState(getProgressDeviceId);
+  const [progressSyncStatus, setProgressSyncStatus] = useState(
+    isProgressSyncEnabled() ? 'connecting' : 'local'
+  );
   const [gameSettings, setGameSettings] = useState({
     soundEnabled: true,
     musicEnabled: true,
@@ -337,11 +485,14 @@ const App = () => {
   });
   const [viewport, setViewport] = useState(getLayoutViewport);
   const [journey, setJourney] = useState(createInitialJourney);
+  const [summerState, setSummerState] = useState(createInitialSummerState);
   const [runHarmony, setRunHarmony] = useState(0);
   const [completionInfo, setCompletionInfo] = useState(null);
   const [builderState, setBuilderState] = useState(createInitialBuilderState);
   const [activeBuilderHouseId, setActiveBuilderHouseId] = useState(null);
   const [selectedBuilderHouseTypeId, setSelectedBuilderHouseTypeId] = useState(HOUSE_TYPES[0].id);
+  const remoteProgressLoadedRef = useRef(!isProgressSyncEnabled());
+  const progressSaveTimerRef = useRef(null);
 
   const activeBiome = getBiomeConfig(journey.currentBiomeIndex);
   const companions = buildUnlockedCompanions(journey.completedBiomeIds);
@@ -380,6 +531,16 @@ const App = () => {
     8,
     92
   );
+  const completedSummerQuestCount = summerState.completedQuestIds.length;
+  const hasUnicornRunEnergy = summerState.stars >= UNICORN_RUN_STAR_COST;
+  const progressSyncLabel =
+    progressSyncStatus === 'synced'
+      ? 'synced'
+      : progressSyncStatus === 'connecting'
+        ? 'syncing'
+        : progressSyncStatus === 'offline'
+          ? 'offline'
+          : 'this device';
 
   useEffect(() => {
     const savedHighScore = window.localStorage.getItem(HIGH_SCORE_STORAGE_KEY);
@@ -414,6 +575,93 @@ const App = () => {
   useEffect(() => {
     window.localStorage.setItem(JOURNEY_STORAGE_KEY, JSON.stringify(journey));
   }, [journey]);
+
+  useEffect(() => {
+    window.localStorage.setItem(SUMMER_STATE_STORAGE_KEY, JSON.stringify(summerState));
+  }, [summerState]);
+
+  useEffect(() => {
+    if (!isProgressSyncEnabled()) {
+      remoteProgressLoadedRef.current = true;
+      setProgressSyncStatus('local');
+      return undefined;
+    }
+
+    let isActive = true;
+
+    const hydrateProgress = async () => {
+      try {
+        const remoteProgress = await loadRemoteProgress(progressProfileId);
+        if (!isActive) {
+          return;
+        }
+
+        if (remoteProgress) {
+          if (Number.isFinite(remoteProgress.highScore)) {
+            setHighScore((currentHighScore) => {
+              const nextHighScore = Math.max(currentHighScore, remoteProgress.highScore);
+              window.localStorage.setItem(HIGH_SCORE_STORAGE_KEY, String(nextHighScore));
+              return nextHighScore;
+            });
+          }
+
+          setJourney((currentJourney) =>
+            mergeJourneyProgress(currentJourney, remoteProgress.journey)
+          );
+          setSummerState((currentSummerState) =>
+            mergeSummerProgress(currentSummerState, remoteProgress.summerState)
+          );
+        }
+
+        remoteProgressLoadedRef.current = true;
+        setProgressSyncStatus('synced');
+      } catch (error) {
+        remoteProgressLoadedRef.current = true;
+        setProgressSyncStatus('offline');
+      }
+    };
+
+    hydrateProgress();
+
+    return () => {
+      isActive = false;
+    };
+  }, [progressProfileId]);
+
+  useEffect(() => {
+    if (!isProgressSyncEnabled() || !remoteProgressLoadedRef.current) {
+      return undefined;
+    }
+
+    if (progressSaveTimerRef.current) {
+      window.clearTimeout(progressSaveTimerRef.current);
+    }
+
+    progressSaveTimerRef.current = window.setTimeout(() => {
+      const progress = {
+        profileId: progressProfileId,
+        deviceId: progressDeviceId,
+        highScore,
+        journey,
+        summerState,
+        updatedAt: new Date().toISOString(),
+      };
+
+      saveRemoteProgress(progressProfileId, progress)
+        .then(() => {
+          setProgressSyncStatus('synced');
+        })
+        .catch(() => {
+          setProgressSyncStatus('offline');
+        });
+    }, 650);
+
+    return () => {
+      if (progressSaveTimerRef.current) {
+        window.clearTimeout(progressSaveTimerRef.current);
+      }
+    };
+  }, [progressDeviceId, progressProfileId, highScore, journey, summerState]);
 
   useEffect(() => {
     let renderState = null;
@@ -574,10 +822,33 @@ const App = () => {
   };
 
   const startAdventure = () => {
+    setSummerState((currentState) => {
+      const hasEnoughStars = currentState.stars >= UNICORN_RUN_STAR_COST;
+
+      return {
+        ...currentState,
+        stars: hasEnoughStars ? currentState.stars - UNICORN_RUN_STAR_COST : currentState.stars,
+        unicornRuns: currentState.unicornRuns + 1,
+      };
+    });
     setActiveBuilderHouseId(null);
     setRunHarmony(0);
     setCompletionInfo(null);
     setScreen('playing');
+  };
+
+  const completeSummerQuest = (quest) => {
+    setSummerState((currentState) => {
+      if (currentState.completedQuestIds.includes(quest.id)) {
+        return currentState;
+      }
+
+      return {
+        ...currentState,
+        stars: currentState.stars + quest.reward,
+        completedQuestIds: [...currentState.completedQuestIds, quest.id],
+      };
+    });
   };
 
   const continueAdventure = () => {
@@ -751,9 +1022,7 @@ const App = () => {
 
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault();
-        setRunHarmony(0);
-        setCompletionInfo(null);
-        setScreen('playing');
+        startAdventure();
       }
     };
 
@@ -987,6 +1256,142 @@ const App = () => {
                       {toHaikuText(getCompanionCardHaiku(companions.length))}
                     </div>
                   )}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  background: 'rgba(255,255,255,0.66)',
+                  border: '1px solid rgba(255,255,255,0.64)',
+                  borderRadius: 26,
+                  padding: compactLayout ? '14px 12px' : '18px',
+                  marginTop: compactLayout ? 14 : 18,
+                  boxShadow: '0 16px 34px rgba(15, 23, 42, 0.1)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 12,
+                    marginBottom: 12,
+                  }}
+                >
+                  <div>
+                    <div
+                      style={{
+                        fontSize: compactLayout ? 11 : 13,
+                        fontWeight: 800,
+                        letterSpacing: 1.2,
+                        textTransform: 'uppercase',
+                        opacity: 0.68,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Summer Stars
+                    </div>
+                    <div
+                      style={{
+                        fontSize: compactLayout ? 20 : 28,
+                        fontWeight: 800,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {summerState.stars} stars
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      textAlign: 'right',
+                      fontSize: compactLayout ? 12 : 14,
+                      fontWeight: 700,
+                      lineHeight: 1.25,
+                    }}
+                  >
+                    {progressProfileId}
+                    <br />
+                    {progressSyncLabel}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    marginBottom: 12,
+                    fontSize: compactLayout ? 12 : 13,
+                    fontWeight: 800,
+                    color: activeBiome.palette.heading,
+                    opacity: 0.72,
+                  }}
+                >
+                  <span>{completedSummerQuestCount} / {SUMMER_QUESTS.length} today</span>
+                  <span>Best {highScore}</span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: compactLayout
+                      ? '1fr'
+                      : 'repeat(auto-fit, minmax(170px, 1fr))',
+                    gap: 10,
+                  }}
+                >
+                  {SUMMER_QUESTS.map((quest) => {
+                    const isComplete = summerState.completedQuestIds.includes(quest.id);
+
+                    return (
+                      <button
+                        key={quest.id}
+                        type="button"
+                        onClick={() => completeSummerQuest(quest)}
+                        disabled={isComplete}
+                        style={{
+                          minHeight: compactLayout ? 54 : 64,
+                          border: isComplete
+                            ? '1px solid rgba(255,255,255,0.72)'
+                            : `2px solid ${quest.theme}`,
+                          borderRadius: 20,
+                          background: isComplete
+                            ? 'rgba(255,255,255,0.56)'
+                            : `linear-gradient(135deg, ${quest.theme}, rgba(255,255,255,0.78))`,
+                          color: isComplete ? activeBiome.palette.heading : '#ffffff',
+                          cursor: isComplete ? 'default' : 'pointer',
+                          opacity: isComplete ? 0.68 : 1,
+                          padding: '10px 12px',
+                          textAlign: 'left',
+                          boxShadow: isComplete
+                            ? 'none'
+                            : '0 12px 24px rgba(15, 23, 42, 0.12)',
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: 'block',
+                            fontSize: compactLayout ? 14 : 15,
+                            fontWeight: 800,
+                            lineHeight: 1.16,
+                          }}
+                        >
+                          {quest.title}
+                        </span>
+                        <span
+                          style={{
+                            display: 'block',
+                            marginTop: 5,
+                            fontSize: 12,
+                            fontWeight: 800,
+                            opacity: 0.82,
+                          }}
+                        >
+                          {isComplete ? 'Done today' : `+${quest.reward} stars`}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1344,7 +1749,9 @@ const App = () => {
                       border: `3px solid ${activeBiome.palette.accent}`,
                       borderRadius: '50%',
                       background: `radial-gradient(circle at 35% 30%, rgba(255,255,255,0.97), ${activeBiome.palette.questItemSoft} 28%, ${activeBiome.palette.accentSoft} 66%, ${activeBiome.palette.accent} 100%)`,
-                      boxShadow: `0 24px 48px ${activeBiome.palette.platformGlow}`,
+                      boxShadow: hasUnicornRunEnergy
+                        ? `0 24px 48px ${activeBiome.palette.platformGlow}`
+                        : '0 18px 34px rgba(15, 23, 42, 0.14)',
                       color: activeBiome.palette.heading,
                       padding: compactLayout ? '10px' : '12px',
                       cursor: 'pointer',
@@ -1370,7 +1777,9 @@ const App = () => {
                         marginBottom: compactLayout ? 3 : 5,
                       }}
                     >
-                      {activeBiome.shortName}
+                      {hasUnicornRunEnergy
+                        ? `${UNICORN_RUN_STAR_COST} star run`
+                        : 'free explore'}
                     </span>
                     {toHaikuText(getWorldCenterTitleLines(activeBiome))}
                   </button>
